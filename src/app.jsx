@@ -545,9 +545,11 @@ function Scanner({ T, onClose, onRead }) {
     const ok = (raw) => { if (!stopped && /^\d{8,14}$/.test(raw)) { stopped = true; onRead(raw); } };
 
     (async () => {
+      console.log('[foodcheck] Scanner init: BarcodeDetector available?', 'BarcodeDetector' in window, 'getUserMedia?', !!navigator.mediaDevices?.getUserMedia);
       // Path 1: the browser's built-in detector (Chrome/Edge on Android and ChromeOS, some desktops).
       if ('BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia) {
         try {
+          console.log('[foodcheck] BarcodeDetector available, attempting native detection');
           const detector = new window.BarcodeDetector({ formats: ['upc_a', 'upc_e', 'ean_13', 'ean_8'] });
           // Probe: some desktops expose the class but the detection service is unavailable.
           await detector.detect(document.createElement('canvas')).catch((e) => { if (e?.name === 'NotSupportedError') throw e; });
@@ -555,31 +557,56 @@ function Scanner({ T, onClose, onRead }) {
           if (stopped) return;
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
+          console.log('[foodcheck] Native BarcodeDetector ready, polling video frames');
           setLoading(false);
+          let attempts = 0;
           const tick = async () => {
             if (stopped) return;
-            try { const codes = await detector.detect(videoRef.current); const hit = codes.find((c) => /^\d{8,14}$/.test(c.rawValue)); if (hit) { ok(hit.rawValue); return; } } catch { /* frame errors are normal */ }
+            try {
+              attempts++;
+              const codes = await detector.detect(videoRef.current);
+              const hit = codes.find((c) => /^\d{8,14}$/.test(c.rawValue));
+              if (hit) { console.log('[foodcheck] Detected barcode:', hit.rawValue); ok(hit.rawValue); return; }
+              if (attempts % 20 === 0) console.log(`[foodcheck] Detection running (${attempts} frames, ${codes.length} codes found but none valid)`);
+            } catch (e) {
+              if (attempts % 20 === 0) console.log(`[foodcheck] Frame ${attempts}: ${e?.message || e}`);
+            }
             timer = setTimeout(tick, 250);
           };
           tick();
           return;
         } catch (e) {
+          console.log('[foodcheck] BarcodeDetector failed:', e?.message || e);
           if (e?.name === 'NotAllowedError') { setErr('denied'); setLoading(false); return; }
           if (stream) { for (const t of stream.getTracks()) t.stop(); stream = null; }
+          console.log('[foodcheck] Falling back to ZXing');
           // fall through to ZXing
         }
       }
       // Path 2: vendored ZXing decoder — works in Windows/Mac desktop browsers and iPhone Safari.
       try {
+        console.log('[foodcheck] BarcodeDetector unavailable or failed; loading ZXing');
         if (!navigator.mediaDevices?.getUserMedia) throw new Error('no camera API');
         await loadZxing();
+        console.log('[foodcheck] ZXing loaded, window.ZXingBrowser:', typeof window.ZXingBrowser);
         if (stopped) return;
+        if (!window.ZXingBrowser?.BrowserMultiFormatReader) {
+          throw new Error('ZXing loaded but BrowserMultiFormatReader not found');
+        }
+        console.log('[foodcheck] ZXing starting video decode stream');
         const reader = new window.ZXingBrowser.BrowserMultiFormatReader();
         zxControls = await window.ZXingBrowser.BrowserMultiFormatReader.prototype.decodeFromConstraints.call(
           reader, { video: { facingMode: 'environment' }, audio: false }, videoRef.current,
-          (result) => { if (result) ok(result.getText()); });
+          (result) => {
+            if (result) {
+              console.log('[foodcheck] ZXing detected barcode:', result.getText());
+              ok(result.getText());
+            }
+          });
+        console.log('[foodcheck] ZXing decode loop started');
         setLoading(false);
       } catch (e) {
+        console.error('[foodcheck] Scanner failed:', e?.message || e, e?.stack);
         setErr(e?.name === 'NotAllowedError' ? 'denied' : 'unsupported');
         setLoading(false);
       }
