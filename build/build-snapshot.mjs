@@ -132,18 +132,24 @@ async function fetchOpenFda() {
 // ---------- FSIS ----------
 async function fetchFsis() {
   if (FIXTURE) return fixture.fsis;
+  const json = await fetchWithRetry(() => get(ENDPOINTS.fsis_recall, { json: true, headers: { Accept: 'application/json' } }));
+  return Array.isArray(json) ? json : json.data || json.results || [];
+}
+
+async function fetchWithRetry(fn, maxAttempts = 3, baseDelayMs = 3000) {
   let lastError;
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const json = await get(ENDPOINTS.fsis_recall, { json: true, headers: { Accept: 'application/json' } });
-      return Array.isArray(json) ? json : json.data || json.results || [];
+      return await fn();
     } catch (e) {
       lastError = e;
-      if (e.status === 403 && attempt < 3) {
-        const delay = Math.pow(2, attempt) * 10000; // 20s, 40s
-        log(`FSIS 403; retrying in ${delay/1000}s (attempt ${attempt+1}/3)`);
-        await sleep(delay);
-      } else throw e;
+      if ((e.status === 403 || e.status === 404) && attempt < maxAttempts) {
+        const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
+        log(`HTTP ${e.status}; retrying in ${delayMs / 1000}s (attempt ${attempt}/${maxAttempts})`);
+        await sleep(delayMs);
+      } else {
+        throw e;
+      }
     }
   }
   throw lastError;
@@ -151,14 +157,17 @@ async function fetchFsis() {
 
 async function fetchRss() {
   if (FIXTURE) return fixture.rss;
-  return parseRss(await get(ENDPOINTS.fda_rss));
+  return parseRss(await fetchWithRetry(() => get(ENDPOINTS.fda_rss)));
 }
 
-async function fetchCdcCounts() { if (FIXTURE) return fixture.cdcCounts; return scrapeCdcCounts(await get(ENDPOINTS.cdc_outbreaks)); }
+async function fetchCdcCounts() {
+  if (FIXTURE) return fixture.cdcCounts;
+  return scrapeCdcCounts(await fetchWithRetry(() => get(ENDPOINTS.cdc_outbreaks)));
+}
 
 async function fetchCore() {
   if (FIXTURE) return { rows: fixture.core, pageDate: '2026-08-20' };
-  const html = await get(ENDPOINTS.fda_core);
+  const html = await fetchWithRetry(() => get(ENDPOINTS.fda_core));
   const rows = scrapeTable(html, ENDPOINTS.fda_core);
   if (!rows.length) throw new Error('scrape returned 0 rows — page structure may have changed');
   const dated = pageDate(html);
