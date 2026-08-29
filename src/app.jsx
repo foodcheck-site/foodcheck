@@ -114,13 +114,19 @@ function LangSwitch({ lang, setLang, T }) {
         <span aria-hidden="true">🌐</span> <span lang={cur.tag}>{cur.label}</span> <span aria-hidden="true">{open ? '▴' : '▾'}</span>
       </button>
       {open && (
-        <span role="menu" className="absolute right-0 top-full z-40 mt-1 min-w-[9rem] rounded-md border border-stockdeep bg-paper shadow-lg py-1 flex flex-col">
-          {LANGS.map((l) => (
-            <button key={l.code} type="button" role="menuitemradio" aria-checked={lang === l.code} lang={l.tag}
-              onClick={() => { setLang(l.code); setOpen(false); }}
-              className={`min-h-[44px] px-3 text-left text-sm ${lang === l.code ? 'bg-ink text-paper' : 'hover:bg-stock'}`}>{l.label}</button>
-          ))}
-        </span>
+        <>
+          {/* invisible backdrop: any tap outside the menu closes it */}
+          <span aria-hidden="true" onClick={() => setOpen(false)} className="fixed inset-0 z-30 cursor-default" />
+          {/* On phones the header wraps and the 🌐 button sits at the LEFT, so the menu anchors
+              left there and right on wide screens; max-w keeps it on-screen either way. */}
+          <span role="menu" className="absolute left-0 sm:left-auto sm:right-0 top-full z-40 mt-1 min-w-[10rem] max-w-[calc(100vw-2rem)] rounded-md border border-stockdeep bg-paper shadow-lg py-1 flex flex-col">
+            {LANGS.map((l) => (
+              <button key={l.code} type="button" role="menuitemradio" aria-checked={lang === l.code} lang={l.tag}
+                onClick={() => { setLang(l.code); setOpen(false); }}
+                className={`min-h-[44px] px-3 text-left text-sm whitespace-nowrap ${lang === l.code ? 'bg-ink text-paper' : 'hover:bg-stock'}`}>{l.label}</button>
+            ))}
+          </span>
+        </>
       )}
     </span>
   );
