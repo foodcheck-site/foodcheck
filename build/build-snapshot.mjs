@@ -132,8 +132,21 @@ async function fetchOpenFda() {
 // ---------- FSIS ----------
 async function fetchFsis() {
   if (FIXTURE) return fixture.fsis;
-  const json = await get(ENDPOINTS.fsis_recall, { json: true, headers: { Accept: 'application/json' } });
-  return Array.isArray(json) ? json : json.data || json.results || [];
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const json = await get(ENDPOINTS.fsis_recall, { json: true, headers: { Accept: 'application/json' } });
+      return Array.isArray(json) ? json : json.data || json.results || [];
+    } catch (e) {
+      lastError = e;
+      if (e.status === 403 && attempt < 3) {
+        const delay = Math.pow(2, attempt) * 10000; // 20s, 40s
+        log(`FSIS 403; retrying in ${delay/1000}s (attempt ${attempt+1}/3)`);
+        await sleep(delay);
+      } else throw e;
+    }
+  }
+  throw lastError;
 }
 
 async function fetchRss() {
