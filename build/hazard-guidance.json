@@ -1,0 +1,427 @@
+{
+ "_note": "Per-language blocks. en copy is the source of truth; es/ko/zh are translations that MUST be verified by a person who reads that language before their checks[] gets an entry. Each language has its own checks[] ({at, by}) and shows as unverified in the UI until then. lastReachableAt is written by the build step; never edit by hand.",
+ "listeria": {
+  "citation": {
+   "title": "CDC — About Listeria infection",
+   "url": "https://www.cdc.gov/listeria/",
+   "lastReachableAt": null,
+   "lastCheckStatus": null
+  },
+  "langs": {
+   "en": {
+    "who": "People who are pregnant, 65 or older, or have a weakened immune system",
+    "lines": [
+     "If you ate this, contact a healthcare provider even if you feel fine now. Tell your provider if you ate a recalled food in the past two months — Listeria illness can start weeks later.",
+     "Listeria can cause pregnancy loss, premature birth, or serious illness in newborns.",
+     "Clean the fridge shelves, containers, and surfaces the product touched."
+    ],
+    "checks": []
+   },
+   "es": {
+    "who": "Personas embarazadas, de 65 años o más, o con el sistema inmunitario debilitado",
+    "lines": [
+     "Si comió este producto, comuníquese con un profesional de salud aunque ahora se sienta bien. Avise a su proveedor si comió un alimento retirado en los últimos dos meses: la listeriosis puede comenzar semanas después.",
+     "La Listeria puede causar pérdida del embarazo, parto prematuro o enfermedad grave en recién nacidos.",
+     "Limpie los estantes del refrigerador, los recipientes y las superficies que tocó el producto."
+    ],
+    "checks": []
+   },
+   "ko": {
+    "who": "임신 중이거나 65세 이상이거나 면역력이 약한 분",
+    "lines": [
+     "이 제품을 드셨다면 지금 괜찮더라도 의료진에게 연락하세요. 지난 두 달 안에 리콜된 식품을 먹었다면 의료진에게 알리세요. 리스테리아 감염은 몇 주 뒤에 시작될 수 있습니다.",
+     "리스테리아는 유산, 조산 또는 신생아의 중증 질환을 일으킬 수 있습니다.",
+     "제품이 닿았던 냉장고 선반, 용기, 표면을 세척하세요."
+    ],
+    "checks": []
+   },
+   "zh": {
+    "who": "孕妇、65 岁及以上或免疫力低下的人群",
+    "lines": [
+     "如果您吃了此产品，即使现在感觉良好也请联系医护人员。如果您在过去两个月内吃过被召回的食品，请告知医生——李斯特菌感染可能在数周后才发病。",
+     "李斯特菌可导致流产、早产或新生儿重症。",
+     "请清洁产品接触过的冰箱隔板、容器和表面。"
+    ],
+    "checks": []
+   },
+   "vi": {
+    "who": "Người đang mang thai, từ 65 tuổi trở lên, hoặc có hệ miễn dịch yếu",
+    "lines": [
+     "Nếu bạn đã ăn sản phẩm này, hãy liên hệ nhân viên y tế dù hiện tại vẫn khỏe. Báo cho bác sĩ nếu bạn đã ăn thực phẩm bị thu hồi trong hai tháng qua — bệnh do Listeria có thể khởi phát nhiều tuần sau.",
+     "Listeria có thể gây sẩy thai, sinh non hoặc bệnh nặng ở trẻ sơ sinh.",
+     "Lau rửa ngăn tủ lạnh, hộp đựng và các bề mặt sản phẩm đã chạm vào."
+    ],
+    "checks": []
+   },
+   "tl": {
+    "who": "Mga buntis, edad 65 pataas, o may mahinang immune system",
+    "lines": [
+     "Kung nakakain ka ng produktong ito, makipag-ugnayan sa healthcare provider kahit mabuti ang pakiramdam mo ngayon. Sabihin sa provider mo kung nakakain ka ng na-recall na pagkain sa nakaraang dalawang buwan — maaaring magsimula ang sakit na Listeria pagkalipas ng ilang linggo.",
+     "Maaaring magdulot ang Listeria ng pagkalaglag, maagang panganganak, o malubhang sakit sa bagong silang.",
+     "Linisin ang mga istante ng ref, lalagyan, at mga surface na nadikitan ng produkto."
+    ],
+    "checks": []
+   },
+   "ht": {
+    "who": "Moun ansent, moun ki gen 65 an oswa plis, oswa moun ki gen sistèm iminitè fèb",
+    "lines": [
+     "Si ou te manje pwodwi sa a, kontakte yon pwofesyonèl sante menm si ou santi ou byen kounye a. Di doktè ou si ou te manje yon manje yo rele tounen nan de dènye mwa yo — maladi Listeria ka kòmanse plizyè semèn apre.",
+     "Listeria ka lakòz foskouch, akouchman anvan lè, oswa maladi grav nan tibebe fèk fèt.",
+     "Netwaye etajè frijidè a, veso yo, ak sifas pwodwi a te touche."
+    ],
+    "checks": []
+   }
+  }
+ },
+ "e_coli": {
+  "citation": {
+   "title": "CDC — About E. coli infection",
+   "url": "https://www.cdc.gov/ecoli/",
+   "lastReachableAt": null,
+   "lastCheckStatus": null
+  },
+  "langs": {
+   "en": {
+    "who": "Children under 5, adults 65 or older, and anyone with bloody diarrhea",
+    "lines": [
+     "Watch for diarrhea that turns bloody, severe stomach cramps, or very little urine. Very little urine can be a sign of hemolytic uremic syndrome (HUS), a kidney complication most common in young children.",
+     "Don't take anti-diarrheal medicine. Contact a provider before taking antibiotics.",
+     "Get care right away for bloody diarrhea, a fever over 102°F, or signs of dehydration."
+    ],
+    "checks": []
+   },
+   "es": {
+    "who": "Niños menores de 5 años, adultos de 65+ y cualquier persona con diarrea con sangre",
+    "lines": [
+     "Esté atento a diarrea que se vuelve sanguinolenta, cólicos intensos o muy poca orina. Orinar muy poco puede ser señal de síndrome urémico hemolítico (SUH), una complicación renal más común en niños pequeños.",
+     "No tome medicamentos antidiarreicos. Consulte a un profesional antes de tomar antibióticos.",
+     "Busque atención de inmediato si hay diarrea con sangre, fiebre de más de 39 °C (102 °F) o señales de deshidratación."
+    ],
+    "checks": []
+   },
+   "ko": {
+    "who": "5세 미만 어린이, 65세 이상 성인, 혈변이 있는 모든 분",
+    "lines": [
+     "혈변으로 변하는 설사, 심한 복통, 소변량 급감에 주의하세요. 소변량 급감은 어린이에게 흔한 신장 합병증인 용혈성요독증후군(HUS)의 신호일 수 있습니다.",
+     "지사제를 복용하지 마세요. 항생제 복용 전에는 의료진과 상담하세요.",
+     "혈변, 39℃(102°F) 이상의 고열, 탈수 증상이 있으면 즉시 진료를 받으세요."
+    ],
+    "checks": []
+   },
+   "zh": {
+    "who": "5 岁以下儿童、65 岁及以上成人及出现血便者",
+    "lines": [
+     "注意腹泻转为血便、严重腹痛或尿量明显减少。尿量减少可能是溶血性尿毒综合征（HUS）的信号——这种肾脏并发症在幼儿中最常见。",
+     "不要服用止泻药。服用抗生素前请先咨询医生。",
+     "出现血便、超过 39°C（102°F）的发热或脱水迹象时请立即就医。"
+    ],
+    "checks": []
+   },
+   "vi": {
+    "who": "Trẻ dưới 5 tuổi, người từ 65 tuổi, và bất kỳ ai bị tiêu chảy ra máu",
+    "lines": [
+     "Chú ý tiêu chảy chuyển sang ra máu, đau bụng dữ dội, hoặc đi tiểu rất ít. Tiểu rất ít có thể là dấu hiệu hội chứng tan máu urê huyết (HUS), một biến chứng thận thường gặp nhất ở trẻ nhỏ.",
+     "Đừng uống thuốc cầm tiêu chảy. Hỏi ý kiến nhân viên y tế trước khi dùng kháng sinh.",
+     "Đi khám ngay nếu tiêu chảy ra máu, sốt trên 39°C (102°F), hoặc có dấu hiệu mất nước."
+    ],
+    "checks": []
+   },
+   "tl": {
+    "who": "Mga batang wala pang 5 taon, matatandang 65 pataas, at sinumang may dumudugong pagtatae",
+    "lines": [
+     "Bantayan ang pagtataeng nagiging madugo, matinding pananakit ng tiyan, o kakaunting ihi. Ang kakaunting ihi ay maaaring senyales ng hemolytic uremic syndrome (HUS), komplikasyon sa bato na pinakakaraniwan sa maliliit na bata.",
+     "Huwag uminom ng gamot laban sa pagtatae. Kumonsulta muna bago uminom ng antibiotic.",
+     "Magpatingin agad kung madugo ang pagtatae, may lagnat na higit 39°C (102°F), o may senyales ng dehydration."
+    ],
+    "checks": []
+   },
+   "ht": {
+    "who": "Timoun ki poko gen 5 an, granmoun 65 an oswa plis, ak nenpòt moun ki gen dyare ak san",
+    "lines": [
+     "Veye dyare ki vin gen san, gwo doulè vant, oswa pipi ki vin piti anpil. Pipi piti ka yon siy sendwòm emolitik-iremik (HUS), yon konplikasyon ren ki pi komen nan timoun piti.",
+     "Pa pran medikaman kont dyare. Pale ak yon pwofesyonèl sante anvan ou pran antibyotik.",
+     "Al lopital touswit si dyare a gen san, si fyèv la depase 39°C (102°F), oswa si gen siy dezidratasyon."
+    ],
+    "checks": []
+   }
+  }
+ },
+ "botulism": {
+  "citation": {
+   "title": "CDC — About botulism",
+   "url": "https://www.cdc.gov/botulism/",
+   "lastReachableAt": null,
+   "lastCheckStatus": null
+  },
+  "langs": {
+   "en": {
+    "who": "Everyone who ate or may have eaten it",
+    "lines": [
+     "This is a medical emergency. If you ate this product and notice blurred or double vision, drooping eyelids, trouble swallowing or speaking, or muscle weakness, go to an emergency room now.",
+     "Symptoms usually start within 12 to 36 hours but can take several days.",
+     "Don't taste the product to check it, even if it looks and smells normal."
+    ],
+    "checks": []
+   },
+   "es": {
+    "who": "Todas las personas que comieron o pudieron haber comido el producto",
+    "lines": [
+     "Es una emergencia médica. Si comió este producto y nota visión borrosa o doble, párpados caídos, dificultad para tragar o hablar, o debilidad muscular, vaya a urgencias ahora.",
+     "Los síntomas suelen comenzar entre 12 y 36 horas después, pero pueden tardar varios días.",
+     "No pruebe el producto para comprobarlo, aunque se vea y huela normal."
+    ],
+    "checks": []
+   },
+   "ko": {
+    "who": "이 제품을 먹었거나 먹었을 가능성이 있는 모든 분",
+    "lines": [
+     "응급 상황입니다. 이 제품을 먹은 뒤 시야 흐림·복시, 눈꺼풀 처짐, 삼키기·말하기 어려움, 근력 약화가 나타나면 지금 바로 응급실로 가세요.",
+     "증상은 보통 12~36시간 후에 시작되지만 며칠 걸릴 수도 있습니다.",
+     "겉보기와 냄새가 정상이어도 확인하려고 맛보지 마세요."
+    ],
+    "checks": []
+   },
+   "zh": {
+    "who": "吃过或可能吃过此产品的所有人",
+    "lines": [
+     "这是医疗急症。如果您吃了此产品并出现视物模糊或重影、眼睑下垂、吞咽或说话困难、肌肉无力，请立即前往急诊。",
+     "症状通常在 12 至 36 小时内出现，但也可能延迟数天。",
+     "即使产品外观和气味正常，也不要尝试品尝来检验。"
+    ],
+    "checks": []
+   },
+   "vi": {
+    "who": "Mọi người đã ăn hoặc có thể đã ăn sản phẩm",
+    "lines": [
+     "Đây là cấp cứu y tế. Nếu bạn đã ăn sản phẩm này và thấy nhìn mờ hoặc nhìn đôi, sụp mí mắt, khó nuốt hoặc khó nói, yếu cơ — hãy đến phòng cấp cứu ngay.",
+     "Triệu chứng thường bắt đầu sau 12 đến 36 giờ, nhưng có thể muộn vài ngày.",
+     "Đừng nếm thử để kiểm tra, dù sản phẩm trông và ngửi bình thường."
+    ],
+    "checks": []
+   },
+   "tl": {
+    "who": "Lahat ng kumain o maaaring nakakain ng produkto",
+    "lines": [
+     "Medical emergency ito. Kung nakakain ka nito at nakakaramdam ng malabo o dobleng paningin, bumababang talukap, hirap lumunok o magsalita, o panghihina ng kalamnan — pumunta agad sa emergency room.",
+     "Karaniwang nagsisimula ang sintomas sa loob ng 12 hanggang 36 na oras, pero maaaring abutin nang ilang araw.",
+     "Huwag itong tikman para subukan, kahit normal ang itsura at amoy."
+    ],
+    "checks": []
+   },
+   "ht": {
+    "who": "Tout moun ki te manje oswa ki ka te manje pwodwi a",
+    "lines": [
+     "Sa a se yon ijans medikal. Si ou te manje pwodwi sa a epi ou wè twoub oswa doub, po je w ap tonbe, ou gen difikilte pou vale oswa pale, oswa misk ou fèb — ale nan ijans touswit.",
+     "Sentòm yo konn kòmanse ant 12 ak 36 èdtan, men yo ka pran kèk jou.",
+     "Pa goute l pou teste, menm si li sanble epi santi nòmal."
+    ],
+    "checks": []
+   }
+  }
+ },
+ "salmonella": {
+  "citation": {
+   "title": "CDC — About Salmonella infection",
+   "url": "https://www.cdc.gov/salmonella/",
+   "lastReachableAt": null,
+   "lastCheckStatus": null
+  },
+  "langs": {
+   "en": {
+    "who": "Infants, adults 65 or older, pregnant people, and people with a weakened immune system",
+    "lines": [
+     "Symptoms usually start 6 hours to 6 days after eating: diarrhea, fever, and stomach cramps.",
+     "Get care for a fever over 102°F, diarrhea lasting more than 3 days, bloody stool, or signs of dehydration."
+    ],
+    "checks": []
+   },
+   "es": {
+    "who": "Bebés, adultos de 65+, personas embarazadas y personas con el sistema inmunitario debilitado",
+    "lines": [
+     "Los síntomas suelen comenzar entre 6 horas y 6 días después de comer: diarrea, fiebre y cólicos.",
+     "Busque atención si hay fiebre de más de 39 °C (102 °F), diarrea por más de 3 días, sangre en las heces o señales de deshidratación."
+    ],
+    "checks": []
+   },
+   "ko": {
+    "who": "영유아, 65세 이상, 임신 중이거나 면역력이 약한 분",
+    "lines": [
+     "증상은 보통 섭취 후 6시간~6일 사이에 시작됩니다: 설사, 발열, 복통.",
+     "39℃(102°F) 이상의 발열, 3일 넘게 지속되는 설사, 혈변, 탈수 증상이 있으면 진료를 받으세요."
+    ],
+    "checks": []
+   },
+   "zh": {
+    "who": "婴儿、65 岁及以上、孕妇及免疫力低下的人群",
+    "lines": [
+     "症状通常在进食后 6 小时至 6 天内出现：腹泻、发热、腹痛。",
+     "若发热超过 39°C（102°F）、腹泻超过 3 天、便中带血或出现脱水迹象，请就医。"
+    ],
+    "checks": []
+   },
+   "vi": {
+    "who": "Trẻ sơ sinh, người từ 65 tuổi, người mang thai và người có hệ miễn dịch yếu",
+    "lines": [
+     "Triệu chứng thường bắt đầu từ 6 giờ đến 6 ngày sau khi ăn: tiêu chảy, sốt, đau bụng.",
+     "Đi khám nếu sốt trên 39°C (102°F), tiêu chảy quá 3 ngày, phân có máu, hoặc có dấu hiệu mất nước."
+    ],
+    "checks": []
+   },
+   "tl": {
+    "who": "Mga sanggol, matatandang 65 pataas, mga buntis, at may mahinang immune system",
+    "lines": [
+     "Karaniwang nagsisimula ang sintomas 6 na oras hanggang 6 na araw pagkatapos kumain: pagtatae, lagnat, pananakit ng tiyan.",
+     "Magpatingin kung ang lagnat ay higit 39°C (102°F), pagtatae nang higit 3 araw, may dugo sa dumi, o may senyales ng dehydration."
+    ],
+    "checks": []
+   },
+   "ht": {
+    "who": "Tibebe, granmoun 65 an oswa plis, moun ansent, ak moun ki gen sistèm iminitè fèb",
+    "lines": [
+     "Sentòm yo konn kòmanse ant 6 èdtan ak 6 jou apre ou fin manje: dyare, lafyèv, doulè vant.",
+     "Al kay doktè si fyèv la depase 39°C (102°F), si dyare a dire plis pase 3 jou, si gen san nan poupou a, oswa si gen siy dezidratasyon."
+    ],
+    "checks": []
+   }
+  }
+ },
+ "undeclared_*": {
+  "citation": {
+   "title": "FDA — Food allergies",
+   "url": "https://www.fda.gov/allergens",
+   "lastReachableAt": null,
+   "lastCheckStatus": null
+  },
+  "langs": {
+   "en": {
+    "who": "People allergic to {allergen}",
+    "lines": [
+     "If you have this allergy, don't eat it.",
+     "If you already did and have symptoms, use your epinephrine if prescribed and call 911 for trouble breathing, swelling, or fainting.",
+     "People without this allergy can eat it safely."
+    ],
+    "checks": []
+   },
+   "es": {
+    "who": "Personas alérgicas a {allergen}",
+    "lines": [
+     "Si tiene esta alergia, no lo coma.",
+     "Si ya lo comió y tiene síntomas, use su epinefrina si se la recetaron y llame al 911 si hay dificultad para respirar, hinchazón o desmayo.",
+     "Las personas sin esta alergia pueden comerlo sin peligro."
+    ],
+    "checks": []
+   },
+   "ko": {
+    "who": "{allergen} 알레르기가 있는 분",
+    "lines": [
+     "이 알레르기가 있다면 드시지 마세요.",
+     "이미 드셨고 증상이 있다면 처방받은 에피네프린을 사용하고, 호흡곤란·부종·실신 시 911에 전화하세요.",
+     "이 알레르기가 없는 분은 안전하게 드실 수 있습니다."
+    ],
+    "checks": []
+   },
+   "zh": {
+    "who": "对{allergen}过敏的人群",
+    "lines": [
+     "如果您有此过敏，请勿食用。",
+     "如果已经食用并出现症状，请使用医生处方的肾上腺素笔；出现呼吸困难、肿胀或昏厥请拨打 911。",
+     "没有此过敏的人可以安全食用。"
+    ],
+    "checks": []
+   },
+   "vi": {
+    "who": "Người dị ứng với {allergen}",
+    "lines": [
+     "Nếu bạn có dị ứng này, đừng ăn.",
+     "Nếu đã ăn và có triệu chứng, dùng epinephrine nếu được kê đơn và gọi 911 khi khó thở, sưng phù hoặc ngất.",
+     "Người không có dị ứng này có thể ăn an toàn."
+    ],
+    "checks": []
+   },
+   "tl": {
+    "who": "Mga taong allergic sa {allergen}",
+    "lines": [
+     "Kung mayroon kang allergy na ito, huwag itong kainin.",
+     "Kung nakakain ka na at may sintomas, gamitin ang epinephrine kung inireseta ito sa iyo at tumawag sa 911 kapag nahihirapang huminga, namamaga, o hinihimatay.",
+     "Ligtas itong kainin ng mga walang ganitong allergy."
+    ],
+    "checks": []
+   },
+   "ht": {
+    "who": "Moun ki fè alèji ak {allergen}",
+    "lines": [
+     "Si ou gen alèji sa a, pa manje li.",
+     "Si ou te deja manje l epi ou gen sentòm, sèvi ak epinefrin ou si doktè te preskri l epi rele 911 si ou gen difikilte pou respire, anfleman, oswa endispozisyon.",
+     "Moun ki pa gen alèji sa a ka manje l san danje."
+    ],
+    "checks": []
+   }
+  }
+ },
+ "foreign_material": {
+  "citation": {
+   "title": "The agency notice",
+   "url": null,
+   "lastReachableAt": null,
+   "lastCheckStatus": null
+  },
+  "langs": {
+   "en": {
+    "who": "Everyone",
+    "lines": [
+     "Don't eat it.",
+     "If you already did and have mouth or stomach pain, trouble swallowing, or bleeding, seek care."
+    ],
+    "checks": []
+   },
+   "es": {
+    "who": "Todas las personas",
+    "lines": [
+     "No lo coma.",
+     "Si ya lo comió y tiene dolor en la boca o el estómago, dificultad para tragar o sangrado, busque atención médica."
+    ],
+    "checks": []
+   },
+   "ko": {
+    "who": "모든 분",
+    "lines": [
+     "드시지 마세요.",
+     "이미 드셨고 입이나 배의 통증, 삼키기 어려움, 출혈이 있으면 진료를 받으세요."
+    ],
+    "checks": []
+   },
+   "zh": {
+    "who": "所有人",
+    "lines": [
+     "请勿食用。",
+     "如果已经食用并出现口腔或腹部疼痛、吞咽困难或出血，请就医。"
+    ],
+    "checks": []
+   },
+   "vi": {
+    "who": "Mọi người",
+    "lines": [
+     "Đừng ăn.",
+     "Nếu đã ăn và bị đau miệng hoặc bụng, khó nuốt, hoặc chảy máu, hãy đi khám."
+    ],
+    "checks": []
+   },
+   "tl": {
+    "who": "Lahat",
+    "lines": [
+     "Huwag itong kainin.",
+     "Kung nakakain ka na at sumasakit ang bibig o tiyan, nahihirapang lumunok, o dumudugo, magpatingin sa doktor."
+    ],
+    "checks": []
+   },
+   "ht": {
+    "who": "Tout moun",
+    "lines": [
+     "Pa manje li.",
+     "Si ou te deja manje l epi ou gen doulè nan bouch oswa vant, difikilte pou vale, oswa senyen, al kay doktè."
+    ],
+    "checks": []
+   }
+  }
+ }
+}

@@ -1,0 +1,130 @@
+{
+  "_note": "Fictional firms and products. Field names mirror the real openFDA and FSIS responses. Used by `node build/build-snapshot.mjs --fixture` and by test/run.mjs.",
+  "openfda": [
+    {
+      "recall_number": "F-1101-2026", "event_id": "98001", "classification": "Class I", "status": "Ongoing",
+      "recall_initiation_date": "20260731", "report_date": "20260819", "center_classification_date": "20260818",
+      "recalling_firm": "Riverbend Fresh Foods, Inc.", "city": "Modesto", "state": "CA", "country": "United States",
+      "product_description": "Riverbend Fresh brand Baby Spinach, 5 oz clamshell, UPC 0 41220 33456 8. Also sold as Meadow Basket Baby Spinach 10 oz, UPC 041220-334581.",
+      "code_info": "Lot codes RB2607A, RB2607B, RB2608A. Best by 08/12/2026 through 08/20/2026.",
+      "reason_for_recall": "Product may be contaminated with Listeria monocytogenes. Consumers who have purchased the product are urged not to consume it and to return it to the place of purchase for a full refund. Consumers should also clean and sanitize refrigerator shelves and surfaces that may have touched the product.",
+      "distribution_pattern": "Nationwide in the US and Ontario, Canada"
+    },
+    {
+      "recall_number": "F-1102-2026", "event_id": "98001", "classification": "Class I", "status": "Ongoing",
+      "recall_initiation_date": "20260731", "report_date": "20260819", "center_classification_date": "20260818",
+      "recalling_firm": "Riverbend Fresh Foods, Inc.", "city": "Modesto", "state": "CA", "country": "United States",
+      "product_description": "Riverbend Fresh brand Spring Mix, 5 oz clamshell, UPC 041220334605",
+      "code_info": "Lot RB2607C; Best by 08/14/2026",
+      "reason_for_recall": "Product may be contaminated with Listeria monocytogenes.",
+      "distribution_pattern": "Nationwide"
+    },
+    {
+      "recall_number": "F-1120-2026", "event_id": "98014", "classification": "Class I", "status": "Ongoing",
+      "recall_initiation_date": "20260805", "report_date": "20260821", "center_classification_date": "20260820",
+      "recalling_firm": "Sunhaven Produce Co", "city": "Nogales", "state": "AZ", "country": "United States",
+      "product_description": "Whole cucumbers, sold loose and in 6-count bags labeled Sunhaven, PLU 4062",
+      "code_info": "All product shipped between July 28 and August 5, 2026",
+      "reason_for_recall": "Salmonella contamination. Consumers should not eat the cucumbers and should throw them away. Do not return to the store.",
+      "distribution_pattern": "AZ, CA, NV, UT, CO, TX, OR, WA, IN, and other states via distributors"
+    },
+    {
+      "recall_number": "F-1131-2026", "event_id": "98022", "classification": "Class I", "status": "Ongoing",
+      "recall_initiation_date": "20260809", "report_date": "20260821", "center_classification_date": "20260820",
+      "recalling_firm": "Deli Delights LLC", "city": "Newark", "state": "NJ", "country": "United States",
+      "product_description": "Deli Delights Cucumber Dill Salad, 12 oz tub, UPC 7 12345 67890 4",
+      "code_info": "Use by dates 8/15/26 through 8/22/26",
+      "reason_for_recall": "Product contains cucumbers that may be contaminated with Salmonella. Consumers who purchased the product should discard it or return it to the store for a refund.",
+      "distribution_pattern": "New Jersey, New York, Pennsylvania, Connecticut"
+    },
+    {
+      "recall_number": "F-1140-2026", "event_id": "98030", "classification": "Class II", "status": "Ongoing",
+      "recall_initiation_date": "20260812", "report_date": "20260821", "center_classification_date": "20260820",
+      "recalling_firm": "TrailCo Snacks", "city": "Boulder", "state": "CO", "country": "United States",
+      "product_description": "TrailCo Honey Oat Granola Bars, 6 ct box",
+      "code_info": "Best if used by JAN 12 2027, JAN 19 2027",
+      "reason_for_recall": "Undeclared milk. People who have an allergy or severe sensitivity to milk run the risk of a serious allergic reaction. Consumers can return the product for a full refund.",
+      "distribution_pattern": "N/A"
+    },
+    {
+      "recall_number": "F-1150-2026", "event_id": "98041", "classification": "Class I", "status": "Ongoing",
+      "recall_initiation_date": "20260815", "report_date": "20260822", "center_classification_date": "20260821",
+      "recalling_firm": "Old Orchard Canning", "city": "Yakima", "state": "WA", "country": "United States",
+      "product_description": "Old Orchard home-style canned green beans, 16 oz jar, UPC 0 88888 11111 7",
+      "code_info": "Lot 26-207 through 26-215",
+      "reason_for_recall": "Potential for Clostridium botulinum contamination. Consumers should not open or consume the product, even if it does not look or smell spoiled. Double bag and discard.",
+      "distribution_pattern": "Washington, Oregon, Idaho"
+    },
+    {
+      "recall_number": "F-1160-2026", "event_id": "98050", "classification": "Class III", "status": "Ongoing",
+      "recall_initiation_date": "20260810", "report_date": "20260821", "center_classification_date": "20260820",
+      "recalling_firm": "Maple Row Bakery", "city": "Burlington", "state": "VT", "country": "United States",
+      "product_description": "Maple Row Cinnamon Swirl Bread, 20 oz loaf",
+      "code_info": "All lots",
+      "reason_for_recall": "Product is misbranded; label lists incorrect net weight.",
+      "distribution_pattern": "Vermont only"
+    },
+    {
+      "recall_number": "F-1170-2026", "event_id": "98055", "classification": "Class II", "status": "Completed",
+      "recall_initiation_date": "20260601", "report_date": "20260701", "center_classification_date": "20260630",
+      "recalling_firm": "Blue Harbor Seafood", "city": "Portland", "state": "ME", "country": "United States",
+      "product_description": "Smoked salmon, 4 oz vacuum pack",
+      "code_info": "Lot BH0522",
+      "reason_for_recall": "Product may contain small pieces of plastic.",
+      "distribution_pattern": "ME, NH, MA"
+    }
+  ],
+  "fsis": [
+    {
+      "field_recall_number": "031-2026", "field_title": "Prairie Table Foods Recalls Ready-To-Eat Chicken Salad Products Due To Possible Salmonella Contamination",
+      "field_recall_classification": "Class I", "field_risk_level": "High", "field_recall_date": "2026-08-14", "field_active_notice": "True",
+      "field_establishment": "Prairie Table Foods, EST. P-4471", "field_states": "Illinois, Indiana, Wisconsin, Michigan, Ohio",
+      "field_recall_reason": "Product Contamination", "field_recall_type": "Active Recall",
+      "field_product_items": "<ul><li>12-oz. plastic tubs containing \"PRAIRIE TABLE CHICKEN SALAD WITH CUCUMBER\" with use by dates 8/20/26 through 8/28/26 and UPC 0 34567 89012 5.</li></ul>",
+      "field_summary": "<p>Prairie Table Foods, an Elgin, Ill. establishment, is recalling approximately 9,200 pounds of ready-to-eat chicken salad products that may be contaminated with Salmonella. The cucumbers used in the product are subject to a recall by the supplier. FSIS is concerned that some product may be in consumers' refrigerators. Consumers who have purchased these products are urged not to consume them. These products should be thrown away or returned to the place of purchase.</p>",
+      "field_recall_url": "/recalls-alerts/prairie-table-foods-recalls-ready-eat-chicken-salad-products-due-possible-salmonella"
+    },
+    {
+      "field_recall_number": "033-2026", "field_title": "Hollow Creek Meats Recalls Liverwurst Products Due To Possible Listeria Contamination",
+      "field_recall_classification": "Class I", "field_risk_level": "High", "field_recall_date": "2026-08-18", "field_active_notice": "True",
+      "field_establishment": "Hollow Creek Meats, EST. 2210", "field_states": "Nationwide",
+      "field_recall_reason": "Product Contamination", "field_recall_type": "Active Recall",
+      "field_product_items": "<ul><li>1-lb. rolls of \"HOLLOW CREEK LIVERWURST\" with sell by dates 9/02/26 through 9/16/26.</li><li>Deli-sliced liverwurst sold at deli counters through 8/17/26.</li></ul>",
+      "field_summary": "<p>Hollow Creek Meats is recalling approximately 71,000 pounds of liverwurst products that may be adulterated with Listeria monocytogenes. Consumers who have purchased these products are urged not to consume them and to throw them away or return them to the place of purchase. Consumers should also clean their refrigerators and any surfaces that came into contact with the product.</p>",
+      "field_recall_url": "/recalls-alerts/hollow-creek-meats-recalls-liverwurst-products"
+    },
+    {
+      "field_recall_number": "034-2026", "field_title": "Kettle & Bone Recalls Ground Beef Due To Possible E. coli O157:H7 Contamination",
+      "field_recall_classification": "Class I", "field_risk_level": "High", "field_recall_date": "2026-08-20", "field_active_notice": "True",
+      "field_establishment": "Kettle & Bone Co., EST. 5510", "field_states": "Texas, Oklahoma, Louisiana",
+      "field_recall_reason": "Product Contamination", "field_recall_type": "Active Recall",
+      "field_product_items": "<ul><li>1-lb. vacuum packs of \"KETTLE & BONE 80/20 GROUND BEEF\" with lot code 0812 and use by 08/28/2026.</li></ul>",
+      "field_summary": "<p>Kettle & Bone Co. is recalling approximately 4,000 pounds of ground beef that may be contaminated with E. coli O157:H7. Consumers who have purchased these products are urged not to consume them. These products should be thrown away or returned to the place of purchase.</p>",
+      "field_recall_url": "/recalls-alerts/kettle-bone-recalls-ground-beef"
+    }
+  ],
+  "rss": [
+    {
+      "title": "Riverbend Fresh Foods Voluntarily Recalls Baby Spinach and Spring Mix Because of Possible Health Risk",
+      "link": "https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts/example-riverbend",
+      "guid": "example-riverbend-2026-08-01",
+      "pubDate": "Sat, 01 Aug 2026 18:30:00 EST",
+      "description": "Riverbend Fresh Foods, Inc. of Modesto, CA is recalling Baby Spinach and Spring Mix clamshells because they have the potential to be contaminated with Listeria monocytogenes. Consumers who have purchased the product are urged to return it to the place of purchase for a full refund."
+    },
+    {
+      "title": "Pinecone Nut Company Recalls Roasted Almonds Due to Undeclared Peanuts",
+      "link": "https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts/example-pinecone",
+      "guid": "example-pinecone-2026-08-23",
+      "pubDate": "Sun, 23 Aug 2026 15:00:00 EST",
+      "description": "Pinecone Nut Company of Fresno, CA is recalling 8 oz bags of Roasted Almonds, UPC 0 55555 22222 3, because they may contain undeclared peanuts. Consumers who are allergic to peanuts should not eat the product and may return it for a refund. Product was distributed in California, Arizona, and Nevada."
+    }
+  ],
+  "core": [
+    { "ref": "1210", "id": "core-2026-salm-cuc", "title": "Salmonella — Cucumbers", "pathogen": "Salmonella", "product": "Cucumbers", "states": "AZ, CA, CO, IL, IN, NV, NJ, NY, OR, TX, UT, WA, WI", "cases": 44, "hospitalizations": 12, "deaths": 0, "status": "Active", "updated": "2026-08-20", "url": "https://www.fda.gov/food/outbreaks-foodborne-illness/outbreak-investigation-salmonella-cucumbers-august-2026", "fields": { "ref #": "1210", "pathogen": "Salmonella", "product(s) linked to illnesses": "Cucumbers", "total case count": "44", "investigation status": "Active", "outbreak advisory": "Yes", "traceback": "Initiated", "sample collection & analysis": "Initiated", "on-site inspection": "Not Yet Initiated", "recall": "Initiated" } },
+    { "ref": "1214", "id": "core-2026-list-unk", "title": "Listeria — Not yet identified", "pathogen": "Listeria monocytogenes", "product": "Not Yet Identified", "states": "", "cases": 6, "hospitalizations": 6, "deaths": 0, "status": "Active", "updated": "2026-08-20", "url": "https://www.fda.gov/food/foodborne-pathogens/investigations-foodborne-illness-outbreaks", "fields": { "ref #": "1214", "pathogen": "Listeria monocytogenes", "product(s) linked to illnesses": "Not Yet Identified", "total case count": "6", "investigation status": "Active", "outbreak advisory": "Not Yet", "traceback": "Not Yet Initiated" } }
+  ],
+  "cdcCounts": { "lastUpdated": "2026-08-19", "byAgent": { "campylobacter": 2, "e_coli": 5, "listeria": 7, "salmonella": 23 } },
+  "cdc": [
+    { "id": "cdc-2026-listeria-deli", "title": "Listeria outbreak linked to deli meats", "pathogen": "Listeria monocytogenes", "product": "Deli meats", "states": "Nationwide", "cases": 9, "hospitalizations": 9, "deaths": 1, "status": "Active", "updated": "2026-08-19", "url": "https://www.cdc.gov/foodborne-outbreaks/active-investigations/index.html" }
+  ]
+}

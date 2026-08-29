@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>FoodCheck — CORS probe</title>
+<style>body{font:15px/1.5 system-ui;max-width:52rem;margin:2rem auto;padding:0 1rem}td,th{padding:.3rem .6rem;text-align:left;border-bottom:1px solid #ddd}code{font-family:ui-monospace,monospace}</style>
+<h1>CORS probe</h1>
+<p>Open this file in a browser (from any origin, including <code>file://</code> or a local server) and it tries a plain browser <code>fetch()</code> against each source. A source is browser-fetchable only if the row says <strong>yes</strong>. Paste the table back into the build config as <code>browserFetchable</code>.</p>
+<table><thead><tr><th>Source</th><th>URL</th><th>Result</th></tr></thead><tbody id="rows"></tbody></table>
+<script>
+const sources = [
+  ['openFDA enforcement', 'https://api.fda.gov/food/enforcement.json?search=report_date:[20260801+TO+20260825]&limit=1'],
+  ['FSIS Recall API', 'https://www.fsis.usda.gov/fsis/api/recall/v/1'],
+  ['FDA Recalls RSS', 'https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/recalls/rss.xml'],
+  ['FDA CORE outbreak page', 'https://www.fda.gov/food/foodborne-pathogens/investigations-foodborne-illness-outbreaks'],
+  ['CDC outbreak notices', 'https://www.cdc.gov/foodborne-outbreaks/outbreaks/index.html'],
+];
+const tbody = document.getElementById('rows');
+for (const [name, url] of sources) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${name}</td><td><code>${url.slice(0, 60)}…</code></td><td>probing…</td>`;
+  tbody.appendChild(tr);
+  const cell = tr.lastElementChild;
+  fetch(url, { method: 'GET', mode: 'cors' })
+    .then((r) => { cell.innerHTML = r.ok ? `<strong>yes</strong> (HTTP ${r.status}, ACAO: ${r.headers.get('access-control-allow-origin') ?? 'not exposed'})` : `no — HTTP ${r.status}`; })
+    .catch((e) => { cell.innerHTML = `<strong>no</strong> — ${e.message} (blocked by CORS or network)`; });
+}
+</script>
