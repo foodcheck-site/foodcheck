@@ -50,19 +50,6 @@ USDA notice that lacks one. To enable it anyway:
 If the file format turns out to be Excel-only that month, leave it skipped — the site loses
 nothing users can see.
 
-## Feedback email and donations — both set in index.html
-One line in index.html holds both:
-  <body ... data-feedback-email="" data-donate-url="">
-- data-feedback-email: your address (e.g. "foodcheck@example.com"). Renders a localized
-  "Suggestions? Email us" link on the home and About pages, opening the person's mail app with
-  the subject and page URL prefilled.
-- data-donate-url: your Buy Me a Coffee page (must start with https://, e.g.
-  "https://buymeacoffee.com/yourname"). Renders a localized "Support this project" button next
-  to the feedback link.
-Leave either empty and that element simply doesn't render. No analytics, no forms, no backend.
-The "Why we made this" story on the About page lives in src/i18n.js under whyBody (all seven
-languages) if you ever want to edit it.
-
 ## Drift detection
 FDA and FSIS change formats without notice; parsers then extract less without erroring. Every
 build computes extraction rates per source (`health` lines in the log; also on #/review) and
