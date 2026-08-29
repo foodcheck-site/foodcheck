@@ -1,0 +1,25 @@
+name: Build snapshot
+on:
+  schedule:
+    - cron: '17 * * * *'   # every hour
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: node build/build-snapshot.mjs
+        env:
+          OPENFDA_API_KEY: ${{ secrets.OPENFDA_API_KEY }}
+          FSIS_MPI_URL: ${{ vars.FSIS_MPI_URL }}
+      - run: node test/run.mjs
+      - name: Commit snapshot
+        run: |
+          git config user.name snapshot-bot
+          git config user.email snapshot-bot@users.noreply.github.com
+          git add data/snapshot.json data/archive.json
+          git diff --cached --quiet || git commit -m "snapshot $(date -u +%FT%TZ)"
+          git push
