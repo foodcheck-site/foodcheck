@@ -66,6 +66,8 @@ const STR = {
 
   narrowOneLine: { en: 'state, product, or barcode', es: 'estado, producto o código de barras', ko: '주, 제품, 바코드', zh: '州、产品或条形码' },
   scan: { en: 'Scan', es: 'Escanear', ko: '스캔', zh: '扫码' },
+  listen: { en: 'Listen', es: 'Escuchar', ko: '듣기', zh: '朗读', vi: 'Nghe', tl: 'Pakinggan', ht: 'Koute' },
+  stopListening: { en: 'Stop', es: 'Detener', ko: '정지', zh: '停止', vi: 'Dừng', tl: 'Ihinto', ht: 'Sispann' },
   scanTitle: { en: 'Scan the barcode', es: 'Escanee el código de barras', ko: '바코드를 스캔하세요', zh: '扫描条形码' },
   scanHint: { en: 'Point the camera at the barcode. Nothing is uploaded — reading happens on your device.', es: 'Apunte la cámara al código de barras. No se sube nada: la lectura ocurre en su dispositivo.', ko: '카메라를 바코드에 맞추세요. 아무것도 업로드되지 않으며 판독은 기기에서 이루어집니다.', zh: '将相机对准条形码。不会上传任何内容——识别在您的设备上完成。' },
   scanClose: { en: 'Close', es: 'Cerrar', ko: '닫기', zh: '关闭' },

@@ -338,9 +338,16 @@ function IncidentCard({ row, onOpen, T, lang, archived = false }) {
   // 'nationwide' with a state selected would just repeat the scope line, so it gets no headline.
   const hasMatch = match.matchBasis !== 'none' && match.matchBasis !== 'nationwide';
   const sample = row.sample;
+  // One plain sentence for someone who'd rather listen than read the whole card.
+  const cardSpeech = [
+    incidentTitleFor(lang, inc.titleParts, inc.title),
+    sevText(T, inc.severity).one,
+    hasMatch && mt.line ? mt.line : null,
+    scopeLabelT(T, inc),
+  ].filter(Boolean).join('. ');
   return (
     <li className={`fade-in rounded-lg bg-stock ${s.edge}`}>
-      <button type="button" onClick={() => onOpen(inc.id)} className="block w-full text-left p-4 pl-5 min-h-[44px] rounded-lg hover:bg-stockdeep/60">
+      <button type="button" onClick={() => onOpen(inc.id)} className="block w-full text-left p-4 pl-5 pb-2 min-h-[44px] rounded-lg hover:bg-stockdeep/60">
         <span className="flex justify-between items-baseline gap-2">
           <SeverityBadge severity={inc.severity} T={T} />
           <span className="flex gap-2">
@@ -362,6 +369,11 @@ function IncidentCard({ row, onOpen, T, lang, archived = false }) {
         </p>
         <span className="mt-2 inline-block text-inspection font-medium">{T.whatToDo}</span>
       </button>
+      {/* Sibling, not nested — a button inside the card's open-button would be invalid HTML and
+          would also trigger navigation on every tap. */}
+      <div className="px-4 pl-5 pb-3 -mt-1">
+        <SpeakButton text={cardSpeech} lang={lang} T={T} />
+      </div>
     </li>
   );
 }
@@ -545,11 +557,9 @@ function Scanner({ T, onClose, onRead }) {
     const ok = (raw) => { if (!stopped && /^\d{8,14}$/.test(raw)) { stopped = true; onRead(raw); } };
 
     (async () => {
-      console.log('[foodcheck] Scanner init: BarcodeDetector available?', 'BarcodeDetector' in window, 'getUserMedia?', !!navigator.mediaDevices?.getUserMedia);
       // Path 1: the browser's built-in detector (Chrome/Edge on Android and ChromeOS, some desktops).
       if ('BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia) {
         try {
-          console.log('[foodcheck] BarcodeDetector available, attempting native detection');
           const detector = new window.BarcodeDetector({ formats: ['upc_a', 'upc_e', 'ean_13', 'ean_8'] });
           // Probe: some desktops expose the class but the detection service is unavailable.
           await detector.detect(document.createElement('canvas')).catch((e) => { if (e?.name === 'NotSupportedError') throw e; });
@@ -557,56 +567,31 @@ function Scanner({ T, onClose, onRead }) {
           if (stopped) return;
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
-          console.log('[foodcheck] Native BarcodeDetector ready, polling video frames');
           setLoading(false);
-          let attempts = 0;
           const tick = async () => {
             if (stopped) return;
-            try {
-              attempts++;
-              const codes = await detector.detect(videoRef.current);
-              const hit = codes.find((c) => /^\d{8,14}$/.test(c.rawValue));
-              if (hit) { console.log('[foodcheck] Detected barcode:', hit.rawValue); ok(hit.rawValue); return; }
-              if (attempts % 20 === 0) console.log(`[foodcheck] Detection running (${attempts} frames, ${codes.length} codes found but none valid)`);
-            } catch (e) {
-              if (attempts % 20 === 0) console.log(`[foodcheck] Frame ${attempts}: ${e?.message || e}`);
-            }
+            try { const codes = await detector.detect(videoRef.current); const hit = codes.find((c) => /^\d{8,14}$/.test(c.rawValue)); if (hit) { ok(hit.rawValue); return; } } catch { /* frame errors are normal */ }
             timer = setTimeout(tick, 250);
           };
           tick();
           return;
         } catch (e) {
-          console.log('[foodcheck] BarcodeDetector failed:', e?.message || e);
           if (e?.name === 'NotAllowedError') { setErr('denied'); setLoading(false); return; }
           if (stream) { for (const t of stream.getTracks()) t.stop(); stream = null; }
-          console.log('[foodcheck] Falling back to ZXing');
           // fall through to ZXing
         }
       }
       // Path 2: vendored ZXing decoder — works in Windows/Mac desktop browsers and iPhone Safari.
       try {
-        console.log('[foodcheck] BarcodeDetector unavailable or failed; loading ZXing');
         if (!navigator.mediaDevices?.getUserMedia) throw new Error('no camera API');
         await loadZxing();
-        console.log('[foodcheck] ZXing loaded, window.ZXingBrowser:', typeof window.ZXingBrowser);
         if (stopped) return;
-        if (!window.ZXingBrowser?.BrowserMultiFormatReader) {
-          throw new Error('ZXing loaded but BrowserMultiFormatReader not found');
-        }
-        console.log('[foodcheck] ZXing starting video decode stream');
         const reader = new window.ZXingBrowser.BrowserMultiFormatReader();
         zxControls = await window.ZXingBrowser.BrowserMultiFormatReader.prototype.decodeFromConstraints.call(
           reader, { video: { facingMode: 'environment' }, audio: false }, videoRef.current,
-          (result) => {
-            if (result) {
-              console.log('[foodcheck] ZXing detected barcode:', result.getText());
-              ok(result.getText());
-            }
-          });
-        console.log('[foodcheck] ZXing decode loop started');
+          (result) => { if (result) ok(result.getText()); });
         setLoading(false);
       } catch (e) {
-        console.error('[foodcheck] Scanner failed:', e?.message || e, e?.stack);
         setErr(e?.name === 'NotAllowedError' ? 'denied' : 'unsupported');
         setLoading(false);
       }
@@ -663,7 +648,12 @@ function CodeList({ label, items, mono = true }) {
   );
 }
 
-function AtRisk({ agent, allergens, guidance, T, lang }) {
+/**
+ * Pure lookup, no rendering: resolves the at-risk block for an agent/language, with {allergen}
+ * substituted. Shared by the AtRisk component (renders it) and the read-aloud text composer
+ * (speaks it) so the two can never drift out of sync with each other.
+ */
+function resolveAtRisk(agent, allergens, guidance, lang) {
   if (!agent || !guidance) return null;
   let entry = guidance[agent];
   let allergen = null;
@@ -674,14 +664,18 @@ function AtRisk({ agent, allergens, guidance, T, lang }) {
   }
   if (!entry) return null;
   // New shape: { citation, langs: { en: {who, lines, checks}, es: ..., ko: ..., zh: ... } }.
-  // Old shape (a bare {who, lines, citation}) still renders, as English.
+  // Old shape (a bare {who, lines, citation}) still resolves, as English.
   const langs = entry.langs || { en: { who: entry.who, lines: entry.lines, checks: entry.citation?.checks || [] } };
   const block = langs[lang] || langs.en;
   const usedFallback = !langs[lang] && lang !== 'en';
-  const c = entry.citation || {};
   const sub = (t) => t.replace('{allergen}', allergen || '');
+  return { who: sub(block.who), lines: block.lines.map(sub), usedFallback, citation: entry.citation || {}, checks: block.checks || [] };
+}
 
-  const checks = (block.checks || []).filter((x) => x?.at);
+function AtRisk({ agent, allergens, guidance, T, lang }) {
+  const r = resolveAtRisk(agent, allergens, guidance, lang);
+  if (!r) return null;
+  const { who, lines, usedFallback, citation: c, checks } = r;
   const people = new Set(checks.map((x) => (x.by || '').trim().toLowerCase()).filter(Boolean));
   const last = checks.map((x) => x.at).sort().slice(-1)[0];
   const checkedLine = !checks.length ? T.unverifiedSource
@@ -691,9 +685,9 @@ function AtRisk({ agent, allergens, guidance, T, lang }) {
 
   return (
     <div className="mt-4 rounded-lg border-2 border-ink p-3" lang={usedFallback ? 'en' : undefined}>
-      <p className="font-display font-extrabold">{sub(block.who)}</p>
+      <p className="font-display font-extrabold">{who}</p>
       <ul className="mt-1 space-y-1 text-base">
-        {block.lines.map((l, i) => <li key={i}>{sub(l)}</li>)}
+        {lines.map((l, i) => <li key={i}>{l}</li>)}
       </ul>
       {lang !== 'en' && !usedFallback && !checks.length && T.translationUnverified && <p className="mt-2 text-xs text-ochre font-medium">{T.translationUnverified}</p>}
       <p className="mt-2 text-xs text-slate">
@@ -702,6 +696,37 @@ function AtRisk({ agent, allergens, guidance, T, lang }) {
         {dead ? <span className="text-stamp font-medium"> · {T.linkMoved}</span> : null}
       </p>
     </div>
+  );
+}
+
+/**
+ * Read-aloud button. Uses the browser's built-in speech synthesis — on-device, free, no new
+ * dependency, same "use what the browser already gives us" pattern as the barcode scanner.
+ * Renders nothing if the API is unavailable (old browsers, some webviews) or there's no text.
+ * Only one utterance plays at a time across the whole page: starting a new one cancels any
+ * other, which fires that other button's onerror/onend and resets its own label back to Listen.
+ */
+function SpeakButton({ text, lang, T, size = 'sm' }) {
+  const [speaking, setSpeaking] = useState(false);
+  useEffect(() => () => { try { window.speechSynthesis?.cancel(); } catch { /* already gone */ } }, []);
+  const supported = typeof window !== 'undefined' && window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function';
+  if (!supported || !text) return null;
+  const toggle = (e) => {
+    e.stopPropagation();
+    if (speaking) { window.speechSynthesis.cancel(); setSpeaking(false); return; }
+    window.speechSynthesis.cancel();
+    const u = new window.SpeechSynthesisUtterance(text);
+    u.lang = langTag(lang);
+    u.onstart = () => setSpeaking(true);
+    u.onend = () => setSpeaking(false);
+    u.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(u);
+  };
+  return (
+    <button type="button" onClick={toggle} aria-pressed={speaking}
+      className={`min-h-[44px] ${size === 'lg' ? 'px-4' : 'px-3'} rounded-md border font-medium text-sm inline-flex items-center gap-1.5 ${speaking ? 'bg-ink text-paper border-ink' : 'border-stockdeep'}`}>
+      <span aria-hidden="true">{speaking ? '⏸' : '🔊'}</span> {speaking ? T.stopListening : T.listen}
+    </button>
   );
 }
 
@@ -739,11 +764,37 @@ function Incident({ state, id, onBack, onOpen, onArchive, onOutbreaks, T, lang }
   const outbreaks = (inc.outbreakIds || []).map((oid) => state.outbreaks.find((o) => o.id === oid)).filter(Boolean);
   const confidenceLine = { certain: null, likely: T.groupLikely, possible: T.groupPossible }[inc.groupingConfidence];
 
+  // One spoken pass over the whole "what do I do" path: title, severity, the food, where it was
+  // sold, what to do (the same text the page quotes or falls back to), and the at-risk block.
+  // Deliberately leaves out codes/notices/related-incidents — those are for reading, not the
+  // ten-second answer this button exists for.
+  const atRisk = resolveAtRisk(inc.agent, lead.hazard.allergens, state.hazardGuidance, lang);
+  const speechText = (() => {
+    const esChild = lang === 'es' ? children.find((c) => c.es?.instruction) : null;
+    const doText = esChild ? esChild.es.instruction
+      : instr?.extracted ? instr.text
+      : `${T.dontEat} ${disposal !== 'see_notice' ? dispCopy(T, disposal) : (lead.source === 'fda_enforcement' ? T.fdaDbNoInstr : T.disp_see_notice)}`;
+    const dispLine = (instr?.extracted || esChild) && disposal !== 'see_notice' ? dispCopy(T, disposal) : null;
+    const foodDesc = [...new Set(children.map((c) => c.product.rawDescription || c.title))].join('. ');
+    return [
+      incidentTitleFor(lang, inc.titleParts, inc.title),
+      sevText(T, inc.severity).one,
+      foodDesc,
+      scopeLabelT(T, inc),
+      doText,
+      dispLine,
+      atRisk ? `${atRisk.who}. ${atRisk.lines.join(' ')}` : null,
+    ].filter(Boolean).join('. ');
+  })();
+
   return (
     <main className="mx-auto w-full max-w-2xl px-4 pb-24">
-      <div className="pt-3 flex items-center justify-between">
+      <div className="pt-3 flex items-center justify-between gap-2 flex-wrap">
         <button type="button" onClick={onBack} className="text-inspection underline underline-offset-2 min-h-[44px]">{T.backToList}</button>
-        <ShareButton title={inc.title} T={T} />
+        <span className="flex gap-2">
+          <SpeakButton text={speechText} lang={lang} T={T} size="lg" />
+          <ShareButton title={inc.title} T={T} />
+        </span>
       </div>
 
       {children.every((c) => c.fromFixture) && <p className="mt-2 text-sm text-ochre font-medium">{T.incSample}</p>}
