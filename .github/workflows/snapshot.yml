@@ -18,9 +18,9 @@ jobs:
       - run: node test/run.mjs
       - name: Commit snapshot
         run: |
-          git config user.name snapshot-bot
+         git config user.name snapshot-bot
           git config user.email snapshot-bot@users.noreply.github.com
-            git add data/snapshot.json data/archive.json
-            git diff --cached --quiet || git commit -m "snapshot $(date -u +%FT%TZ)"
-            git pull --rebase
-            git push
+          git add data/snapshot.json data/archive.json
+          git diff --cached --quiet || git commit -m "snapshot $(date -u +%FT%TZ)"
+          git pull --rebase
+          git push
