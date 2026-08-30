@@ -60,7 +60,7 @@ function fail(id, err, extra = {}) {
 }
 
 async function get(url, { json = false, headers = {} } = {}) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'foodcheck-snapshot (public-interest recall tracker)', ...headers } });
+  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) foodcheck-snapshot/1.0 (public-interest recall tracker)', ...headers } });
   if (!res.ok) { const e = new Error(`HTTP ${res.status} ${res.statusText}`); e.status = res.status; throw e; }
   return json ? res.json() : res.text();
 }
