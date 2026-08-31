@@ -261,6 +261,8 @@ function StateTileMap({ selected, onPick, T }) {
   );
 }
 
+const EMPTY_INPUTS = { state: null, query: '', upc: '', lot: '' };
+
 function NarrowStrip({ inputs, setInputs, id, T, collapsible = false, forceOpen = false }) {
   const typedAny = !!(inputs.state || inputs.query.trim() || inputs.upc.trim() || (inputs.lot || '').trim());
   const [open, setOpen] = useState(true);
@@ -289,6 +291,7 @@ function NarrowStrip({ inputs, setInputs, id, T, collapsible = false, forceOpen 
       <span className="flex items-baseline justify-between">
         <h2 id={`${id}-h`} className="font-display text-lg font-extrabold">{T.narrowDown}</h2>
         {collapsible && !typedAny && <button type="button" onClick={() => setOpen(false)} aria-expanded={true} className="min-h-[44px] px-2 text-slate">▴</button>}
+        {typedAny && <button type="button" onClick={() => setInputs({ ...EMPTY_INPUTS })} className="min-h-[44px] px-3 rounded-md border border-ink text-sm font-medium">✕ {T.startOver}</button>}
       </span>
       <p className="mt-1 text-sm text-slate">{T.narrowSub}</p>
       {scanning && <Scanner T={T} onClose={() => setScanning(false)} onRead={(d) => { setInputs({ ...inputs, upc: d }); setScanning(false); setTimeout(() => document.getElementById('active-h')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} />}
@@ -401,13 +404,14 @@ function splitLead(text) {
  * past: caution styling when nothing matched (an empty result is the moment people most need to
  * read the caveat), calm styling when something did. role="status" so screen readers announce it.
  */
-function ResultVerdict({ matched, T }) {
+function ResultVerdict({ matched, T, onClear }) {
   const none = matched === 0;
   const [lead, rest] = splitLead(none ? T.nothingMatched : T.matchedCount(matched));
   return (
     <div role="status" className={`mt-2 rounded-lg border-2 p-3 ${none ? 'border-ochre bg-ochre/10' : 'border-inspection bg-inspection/10'}`}>
       <p className="text-base"><span aria-hidden="true">{none ? '⚠️ ' : '✓ '}</span><span className="font-display font-extrabold">{lead}</span></p>
       {rest && <p className="mt-1 text-sm">{rest}</p>}
+      {onClear && <button type="button" onClick={onClear} className="mt-3 min-h-[44px] px-4 rounded-md bg-ink text-paper text-sm font-medium">✕ {T.startOver}</button>}
     </div>
   );
 }
@@ -496,7 +500,7 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
           {typed ? T.sortedForYou : T.activeNow}
           {loading && <span className="text-xs font-body font-normal text-slate">{T.stillChecking}</span>}
         </h2>
-        {typed && <ResultVerdict matched={matched.length} T={T} />}
+        {typed && <ResultVerdict matched={matched.length} T={T} onClear={() => { setInputs({ ...EMPTY_INPUTS }); announce(T.startOver); document.getElementById('narrow')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} />}
         {!typed && state?.archive?.available?.olderOpen > 0 && (
           <p className="mt-1 text-sm text-slate">{T.olderOpenNote(state.archive.available.olderOpen, Math.round((state.currentDays || 180) / 30))}</p>
         )}

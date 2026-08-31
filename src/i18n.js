@@ -68,6 +68,7 @@ const STR = {
   scan: { en: 'Scan', es: 'Escanear', ko: '스캔', zh: '扫码' },
   details: { en: 'Details', es: 'Detalles', ko: '자세히', zh: '详情', vi: 'Chi tiết', tl: 'Mga detalye', ht: 'Detay' },
   noVoice: { en: (l) => `No ${l} voice on this device — a phone usually has one.`, es: (l) => `Este dispositivo no tiene voz en ${l}; un teléfono suele tenerla.`, ko: (l) => `이 기기에 ${l} 음성이 없습니다. 휴대폰에는 보통 있습니다.`, zh: (l) => `此设备没有${l}语音——手机通常有。`, vi: (l) => `Thiết bị này không có giọng ${l} — điện thoại thường có.`, tl: (l) => `Walang ${l} na boses sa device na ito — kadalasang mayroon ang telepono.`, ht: (l) => `Aparèy sa a pa gen vwa ${l} — yon telefòn anjeneral genyen l.` },
+  startOver: { en: 'Start over', es: 'Empezar de nuevo', ko: '처음부터 다시', zh: '重新开始', vi: 'Bắt đầu lại', tl: 'Magsimula ulit', ht: 'Rekòmanse' },
   listen: { en: 'Listen', es: 'Escuchar', ko: '듣기', zh: '朗读', vi: 'Nghe', tl: 'Pakinggan', ht: 'Koute' },
   stopListening: { en: 'Stop', es: 'Detener', ko: '정지', zh: '停止', vi: 'Dừng', tl: 'Ihinto', ht: 'Sispann' },
   scanTitle: { en: 'Scan the barcode', es: 'Escanee el código de barras', ko: '바코드를 스캔하세요', zh: '扫描条形码' },
