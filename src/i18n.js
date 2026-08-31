@@ -66,6 +66,8 @@ const STR = {
 
   narrowOneLine: { en: 'state, product, or barcode', es: 'estado, producto o código de barras', ko: '주, 제품, 바코드', zh: '州、产品或条形码' },
   scan: { en: 'Scan', es: 'Escanear', ko: '스캔', zh: '扫码' },
+  details: { en: 'Details', es: 'Detalles', ko: '자세히', zh: '详情', vi: 'Chi tiết', tl: 'Mga detalye', ht: 'Detay' },
+  noVoice: { en: (l) => `No ${l} voice on this device — a phone usually has one.`, es: (l) => `Este dispositivo no tiene voz en ${l}; un teléfono suele tenerla.`, ko: (l) => `이 기기에 ${l} 음성이 없습니다. 휴대폰에는 보통 있습니다.`, zh: (l) => `此设备没有${l}语音——手机通常有。`, vi: (l) => `Thiết bị này không có giọng ${l} — điện thoại thường có.`, tl: (l) => `Walang ${l} na boses sa device na ito — kadalasang mayroon ang telepono.`, ht: (l) => `Aparèy sa a pa gen vwa ${l} — yon telefòn anjeneral genyen l.` },
   listen: { en: 'Listen', es: 'Escuchar', ko: '듣기', zh: '朗读', vi: 'Nghe', tl: 'Pakinggan', ht: 'Koute' },
   stopListening: { en: 'Stop', es: 'Detener', ko: '정지', zh: '停止', vi: 'Dừng', tl: 'Ihinto', ht: 'Sispann' },
   scanTitle: { en: 'Scan the barcode', es: 'Escanee el código de barras', ko: '바코드를 스캔하세요', zh: '扫描条形码' },
@@ -644,13 +646,139 @@ const pick = (table, key, lang) => (table[key] ? (table[key][lang] ?? table[key]
 
 /** Assemble an incident title in the given language from titleParts; falls back to the stored
  *  English title for snapshots built before titleParts existed. */
+/** Korean particle by final consonant of the last Hangul syllable; hedged form for non-Hangul. */
+function koParticle(word, withFinal, withoutFinal) {
+  const ch = String(word || '').trim().slice(-1);
+  const code = ch.charCodeAt(0);
+  if (code >= 0xac00 && code <= 0xd7a3) return (code - 0xac00) % 28 === 0 ? withoutFinal : withFinal;
+  return `${withFinal}(${withoutFinal})`;
+}
+
+const ALLERGEN_KEY = { milk: 'milk', egg: 'eggs', peanut: 'peanuts', tree_nut: 'tree nuts', wheat: 'wheat', soy: 'soy', fish: 'fish', shellfish: 'shellfish', sesame: 'sesame', sulfites: 'sulfites', mustard: 'mustard', unknown: 'the undeclared ingredient' };
+
+/**
+ * One plain sentence per incident — the first thing on a card. Built from the same titleParts
+ * as the localized title, plus scope and severity. Every template avoids verb agreement with the
+ * food noun (modals, past tense, or colon forms) so "baked goods" and "deli meat" both read right.
+ * kind: 'pathogen' | 'allergen' | 'foreign' | 'chemical' | 'labeling' | 'uninspected' | 'unfit' | 'other'
+ */
+export function plainSentenceFor(lang, inc, stateLabel) {
+  const parts = inc.titleParts;
+  if (!parts) return null;
+  const food = pick(CATS, parts.category || 'other', lang);
+  const sev = inc.severity;
+  const serious = sev === 'class_1' || sev === 'alert';
+  const mild = sev === 'class_2';
+  const t = parts.hazardType;
+  const kind = t === 'pathogen' ? 'pathogen' : t === 'allergen' ? 'allergen' : t === 'foreign_material' ? 'foreign' : t === 'chemical' ? 'chemical'
+    : t === 'labeling' ? 'labeling' : t === 'uninspected' ? 'uninspected' : (t === 'processing' || t === 'other') && parts.agent === 'unfit' ? 'unfit' : 'other';
+  let allergen = '';
+  if (kind === 'allergen') {
+    const keys = parts.allergens?.length ? parts.allergens : [String(parts.agent || '').replace('undeclared_', '')];
+    const names = keys.map((k) => pick(ALLERGEN_I18N, ALLERGEN_KEY[k] || k, lang));
+    const joiner = { en: ' and ', es: ' y ', ko: '·', zh: '和', vi: ' và ', tl: ' at ', ht: ' ak ' }[lang] || ' and ';
+    allergen = names.join(joiner);
+  }
+  const scope = inc.scope;
+  const n = (inc.statesUnion || []).length;
+  const st = stateLabel || (inc.statesUnion || [])[0] || '';
+  const F = cap(food);
+  const L = {
+    en: () => {
+      const sc = scope === 'nationwide' ? ' sold nationwide' : scope === 'single_state' ? ` sold in ${st}` : scope === 'multi_state' ? ` sold in ${n} states` : '';
+      const h = kind === 'pathogen' ? (serious ? 'could make you seriously sick' : mild ? 'could make you sick' : 'may carry germs')
+        : kind === 'allergen' ? `may contain ${allergen} not listed on the label`
+        : kind === 'foreign' ? 'may contain pieces of metal, plastic, or other material'
+        : kind === 'chemical' ? 'may be contaminated with a chemical'
+        : kind === 'labeling' ? 'may have a labeling or packaging problem'
+        : kind === 'uninspected' ? 'did not get the required safety inspection'
+        : kind === 'unfit' ? 'may not be safe to eat'
+        : serious ? 'could make you seriously sick' : mild ? 'could make you sick' : null;
+      return h ? `${F}${sc} ${h}.` : `Recall: ${food}${sc}.`;
+    },
+    es: () => {
+      // "Comer X podría…" keeps the verb singular whatever the food noun is; note-forms use a colon.
+      const sc = scope === 'nationwide' ? ' a la venta en todo el país' : scope === 'single_state' ? ` a la venta en ${st}` : scope === 'multi_state' ? ` a la venta en ${n} estados` : '';
+      if (kind === 'pathogen' || (kind === 'other' && (serious || mild))) return `Comer ${food}${sc} ${serious ? 'podría enfermarle gravemente' : mild ? 'podría enfermarle' : 'podría exponerle a gérmenes'}.`;
+      const h = kind === 'allergen' ? `puede contener ${allergen} que no aparece en la etiqueta`
+        : kind === 'foreign' ? 'puede contener trozos de metal, plástico u otro material'
+        : kind === 'chemical' ? 'puede tener contaminación química'
+        : kind === 'labeling' ? 'puede tener un problema de etiquetado o envase'
+        : kind === 'uninspected' ? 'no recibió la inspección de seguridad requerida'
+        : kind === 'unfit' ? 'puede no ser seguro para comer' : null;
+      return h ? `${F}${sc}: ${h}.` : `Retiro del mercado: ${food}${sc}.`;
+    },
+    ko: () => {
+      const sc = scope === 'nationwide' ? '전국에서 판매된 ' : scope === 'single_state' ? `${st}에서 판매된 ` : scope === 'multi_state' ? `${n}개 주에서 판매된 ` : '';
+      const h = kind === 'pathogen' ? (serious ? '심각한 질병을 일으킬 수 있습니다' : mild ? '병을 일으킬 수 있습니다' : '세균이 있을 수 있습니다')
+        : kind === 'allergen' ? `라벨에 표시되지 않은 ${allergen}${koParticle(allergen, '이', '가')} 들어 있을 수 있습니다`
+        : kind === 'foreign' ? '금속, 플라스틱 등 이물질이 들어 있을 수 있습니다'
+        : kind === 'chemical' ? '화학물질에 오염되었을 수 있습니다'
+        : kind === 'labeling' ? '라벨 또는 포장에 문제가 있을 수 있습니다'
+        : kind === 'uninspected' ? '필요한 안전 검사를 받지 않았습니다'
+        : kind === 'unfit' ? '먹기에 안전하지 않을 수 있습니다'
+        : serious ? '심각한 질병을 일으킬 수 있습니다' : mild ? '병을 일으킬 수 있습니다' : '리콜되었습니다';
+      return `${sc}${food}${koParticle(food, '은', '는')} ${h}.`;
+    },
+    zh: () => {
+      const sc = scope === 'nationwide' ? '全国销售的' : scope === 'single_state' ? `在${st}销售的` : scope === 'multi_state' ? `在${n}个州销售的` : '';
+      const h = kind === 'pathogen' ? (serious ? '可能导致严重疾病' : mild ? '可能让您生病' : '可能带有细菌')
+        : kind === 'allergen' ? `可能含有标签上未注明的${allergen}`
+        : kind === 'foreign' ? '可能含有金属、塑料或其他异物'
+        : kind === 'chemical' ? '可能受到化学物质污染'
+        : kind === 'labeling' ? '可能存在标签或包装问题'
+        : kind === 'uninspected' ? '未经过必要的安全检验'
+        : kind === 'unfit' ? '可能不宜食用'
+        : serious ? '可能导致严重疾病' : mild ? '可能让您生病' : '已被召回';
+      return `${sc}${food}${h}。`;
+    },
+    vi: () => {
+      const sc = scope === 'nationwide' ? ' bán trên toàn quốc' : scope === 'single_state' ? ` bán ở ${st}` : scope === 'multi_state' ? ` bán ở ${n} tiểu bang` : '';
+      const h = kind === 'pathogen' ? (serious ? 'có thể gây bệnh nặng' : mild ? 'có thể gây bệnh' : 'có thể nhiễm vi khuẩn')
+        : kind === 'allergen' ? `có thể chứa ${allergen} không ghi trên nhãn`
+        : kind === 'foreign' ? 'có thể lẫn mảnh kim loại, nhựa hoặc vật lạ'
+        : kind === 'chemical' ? 'có thể nhiễm hóa chất'
+        : kind === 'labeling' ? 'có thể có vấn đề về nhãn hoặc bao bì'
+        : kind === 'uninspected' ? 'chưa được kiểm định an toàn theo quy định'
+        : kind === 'unfit' ? 'có thể không an toàn để ăn'
+        : serious ? 'có thể gây bệnh nặng' : mild ? 'có thể gây bệnh' : 'đã bị thu hồi';
+      return `${F}${sc} ${h}.`;
+    },
+    tl: () => {
+      const sc = scope === 'nationwide' ? ' na ibinenta sa buong bansa' : scope === 'single_state' ? ` na ibinenta sa ${st}` : scope === 'multi_state' ? ` na ibinenta sa ${n} estado` : '';
+      const h = kind === 'pathogen' ? (serious ? 'maaaring magdulot ng malubhang sakit' : mild ? 'maaaring magpasakit' : 'maaaring may mikrobyo')
+        : kind === 'allergen' ? `maaaring may ${allergen} na wala sa label`
+        : kind === 'foreign' ? 'maaaring may piraso ng metal, plastik, o ibang bagay'
+        : kind === 'chemical' ? 'maaaring kontaminado ng kemikal'
+        : kind === 'labeling' ? 'maaaring may problema sa label o pakete'
+        : kind === 'uninspected' ? 'hindi dumaan sa kinakailangang inspeksyon'
+        : kind === 'unfit' ? 'maaaring hindi ligtas kainin'
+        : serious ? 'maaaring magdulot ng malubhang sakit' : mild ? 'maaaring magpasakit' : 'nire-recall';
+      return `${F}${sc} ay ${h}.`;
+    },
+    ht: () => {
+      const sc = scope === 'nationwide' ? ' yo vann nan tout peyi a' : scope === 'single_state' ? ` yo vann nan ${st}` : scope === 'multi_state' ? ` yo vann nan ${n} eta` : '';
+      const h = kind === 'pathogen' ? (serious ? 'ka fè ou malad grav' : mild ? 'ka fè ou malad' : 'ka gen mikwòb')
+        : kind === 'allergen' ? `ka gen ${allergen} ladan l ki pa sou etikèt la`
+        : kind === 'foreign' ? 'ka gen moso metal, plastik oswa lòt bagay ladan l'
+        : kind === 'chemical' ? 'ka kontamine ak yon pwodwi chimik'
+        : kind === 'labeling' ? 'ka gen yon pwoblèm etikèt oswa anbalaj'
+        : kind === 'uninspected' ? 'pa t jwenn enspeksyon sekirite ki nesesè a'
+        : kind === 'unfit' ? 'ka pa bon pou manje'
+        : serious ? 'ka fè ou malad grav' : mild ? 'ka fè ou malad' : 'rele tounen';
+      return `${F}${sc} ${h}.`;
+    },
+  };
+  return (L[lang] || L.en)();
+}
+
 export function incidentTitleFor(lang, parts, fallback) {
   if (!parts) return fallback;
   let agent;
   if (parts.agent && parts.agent.startsWith('undeclared_')) {
     const keys = (parts.allergens?.length ? parts.allergens : [parts.agent.slice('undeclared_'.length)]);
     const names = keys.map((k) => {
-      const label = { milk: 'milk', egg: 'eggs', peanut: 'peanuts', tree_nut: 'tree nuts', wheat: 'wheat', soy: 'soy', fish: 'fish', shellfish: 'shellfish', sesame: 'sesame', sulfites: 'sulfites', mustard: 'mustard', unknown: 'the undeclared ingredient' }[k] || k;
+      const label = ALLERGEN_KEY[k] || k;
       return pick(ALLERGEN_I18N, label, lang);
     });
     const joiner = { en: ' and ', es: ' y ', ko: '·', zh: '和' }[lang] || ' and ';

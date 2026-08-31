@@ -8,7 +8,7 @@ import { loadAll, loadArchive, freshnessLines, resolveIncident, SOURCE_LABEL } f
 import { agentLabel } from './src/i18n.js';
 import { orderIncidents, evaluate, normalizeStateInput, normalizeUpcInput, normalizeLotInput, upcInputState, scopeLabel, stateName, SEVERITY_RANK, isCurrent } from './src/data/match.js';
 import { STATES, DISPOSAL_COPY, ALLERGEN_LABEL } from './src/data/parse.js';
-import { t as makeT, LANGS, langTag, incidentTitleFor } from './src/i18n.js';
+import { t as makeT, LANGS, langTag, incidentTitleFor, plainSentenceFor } from './src/i18n.js';
 
 const { useState, useEffect, useMemo, useRef } = React;
 
@@ -291,7 +291,7 @@ function NarrowStrip({ inputs, setInputs, id, T, collapsible = false, forceOpen 
         {collapsible && !typedAny && <button type="button" onClick={() => setOpen(false)} aria-expanded={true} className="min-h-[44px] px-2 text-slate">▴</button>}
       </span>
       <p className="mt-1 text-sm text-slate">{T.narrowSub}</p>
-      {scanning && <Scanner T={T} onClose={() => setScanning(false)} onRead={(d) => { setInputs({ ...inputs, upc: d }); setScanning(false); }} />}
+      {scanning && <Scanner T={T} onClose={() => setScanning(false)} onRead={(d) => { setInputs({ ...inputs, upc: d }); setScanning(false); setTimeout(() => document.getElementById('active-h')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} />}
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="block">
           <span className="block text-sm font-medium mb-1">{T.whereAreYou}</span>
@@ -338,43 +338,77 @@ function IncidentCard({ row, onOpen, T, lang, archived = false }) {
   // 'nationwide' with a state selected would just repeat the scope line, so it gets no headline.
   const hasMatch = match.matchBasis !== 'none' && match.matchBasis !== 'nationwide';
   const sample = row.sample;
-  // One plain sentence for someone who'd rather listen than read the whole card.
-  const cardSpeech = [
-    incidentTitleFor(lang, inc.titleParts, inc.title),
-    sevText(T, inc.severity).one,
-    hasMatch && mt.line ? mt.line : null,
-    scopeLabelT(T, inc),
-  ].filter(Boolean).join('. ');
+  const [showDetails, setShowDetails] = useState(false);
+  // Plain-sentence-first: the first thing anyone sees is one sentence a ten-year-old could read.
+  // Everything else (badge, agency, counts, dates) waits behind "Details". Nothing is removed —
+  // it's the same collapse-don't-remove rule as the fold, applied inside the card.
+  const plain = plainSentenceFor(lang, inc, inc.scope === 'single_state' ? stateName(inc.statesUnion[0]) : null);
+  const title = incidentTitleFor(lang, inc.titleParts, inc.title);
+  const sevMeaning = sevText(T, inc.severity);
+  const cardSpeech = [plain || title, plain ? title : sevMeaning.one, hasMatch && mt.line ? mt.line : null].filter(Boolean).join('. ');
   return (
     <li className={`fade-in rounded-lg bg-stock ${s.edge}`}>
       <button type="button" onClick={() => onOpen(inc.id)} className="block w-full text-left p-4 pl-5 pb-2 min-h-[44px] rounded-lg hover:bg-stockdeep/60">
-        <span className="flex justify-between items-baseline gap-2">
-          <SeverityBadge severity={inc.severity} T={T} />
-          <span className="flex gap-2">
+        {(closed || olderOpen || sample) && (
+          <span className="flex gap-2 mb-1">
             {closed && <span className="text-xs font-mono uppercase tracking-wider text-slate border border-slate rounded px-1">{T.closedTag}</span>}
             {olderOpen && <span className="text-xs font-mono uppercase tracking-wider text-slate border border-slate rounded px-1">{T.openTag(fmtDay(inc.lastNoticeDate || inc.firstInitiated))}</span>}
             {sample && <span className="text-xs font-mono uppercase tracking-wider text-ochre border border-ochre rounded px-1">{T.sampleTag}</span>}
           </span>
-        </span>
-        {hasMatch && (
-          <p className={`mt-1 font-display text-lg font-extrabold leading-tight ${match.matchBasis === 'upc' ? 'text-stamp' : match.matchBasis === 'other_state' ? 'text-slate' : ''}`}>{mt.headline}</p>
         )}
-        <p lang={!inc.titleParts && lang !== 'en' ? 'en' : undefined} className={`${hasMatch ? 'mt-0.5 text-base' : 'mt-1 font-display text-lg font-extrabold leading-tight'}`}>{incidentTitleFor(lang, inc.titleParts, inc.title)}</p>
-        {hasMatch && mt.line && <p className="mt-1 text-sm text-slate">{mt.line}</p>}
-        <p className="mt-2 text-sm text-slate flex flex-wrap gap-x-3 gap-y-0.5">
-          <span>{scopeLabelT(T, inc)}{inc.distributionIncomplete && inc.scope !== 'nationwide' ? ` · ${T.listIncomplete}` : ''}</span>
-          <span>{T.notices(inc.recallIds.length)} · {inc.agencies.map((a) => a === 'FSIS' ? 'USDA' : a).join(' + ')}</span>
-          {inc.illnessSummary?.cases ? <span className="text-ink font-medium">{T.illnesses(inc.illnessSummary.cases)}</span> : null}
-          {inc.lastUpdated && <span>{fmtDay(inc.lastUpdated)}</span>}
-        </p>
+        {hasMatch && (
+          <p className={`font-display text-lg font-extrabold leading-tight ${match.matchBasis === 'upc' ? 'text-stamp' : match.matchBasis === 'other_state' ? 'text-slate' : ''}`}>{mt.headline}</p>
+        )}
+        {plain
+          ? <>
+              <p className={`${hasMatch ? 'mt-1 text-lg' : 'text-xl'} font-display font-extrabold leading-snug`}>{plain}</p>
+              <p className="mt-1 text-sm text-slate" lang={!inc.titleParts && lang !== 'en' ? 'en' : undefined}>{title}</p>
+            </>
+          : <p lang={lang !== 'en' ? 'en' : undefined} className={`${hasMatch ? 'mt-0.5 text-base' : 'font-display text-lg font-extrabold leading-tight'}`}>{title}</p>}
         <span className="mt-2 inline-block text-inspection font-medium">{T.whatToDo}</span>
       </button>
-      {/* Sibling, not nested — a button inside the card's open-button would be invalid HTML and
+      {/* Siblings, not nested — buttons inside the card's open-button would be invalid HTML and
           would also trigger navigation on every tap. */}
-      <div className="px-4 pl-5 pb-3 -mt-1">
+      <div className="px-4 pl-5 pb-3 -mt-1 flex items-center gap-2 flex-wrap">
         <SpeakButton text={cardSpeech} lang={lang} T={T} />
+        <button type="button" onClick={() => setShowDetails(!showDetails)} aria-expanded={showDetails} className="min-h-[44px] px-3 rounded-md border border-stockdeep text-sm font-medium">{T.details} {showDetails ? '▴' : '▾'}</button>
       </div>
+      {showDetails && (
+        <div className="px-4 pl-5 pb-4 -mt-1 text-sm">
+          <SeverityBadge severity={inc.severity} T={T} />
+          <p className="mt-1">{sevMeaning.one}</p>
+          {hasMatch && mt.line && <p className="mt-1 text-slate">{mt.line}</p>}
+          <p className="mt-2 text-slate flex flex-wrap gap-x-3 gap-y-0.5">
+            <span>{scopeLabelT(T, inc)}{inc.distributionIncomplete && inc.scope !== 'nationwide' ? ` · ${T.listIncomplete}` : ''}</span>
+            <span>{T.notices(inc.recallIds.length)} · {inc.agencies.map((a) => a === 'FSIS' ? 'USDA' : a).join(' + ')}</span>
+            {inc.illnessSummary?.cases ? <span className="text-ink font-medium">{T.illnesses(inc.illnessSummary.cases)}</span> : null}
+            {inc.lastUpdated && <span>{fmtDay(inc.lastUpdated)}</span>}
+          </p>
+        </div>
+      )}
     </li>
+  );
+}
+
+/** Split "First sentence. The rest." → [lead, rest] across Latin and CJK punctuation. */
+function splitLead(text) {
+  const m = String(text).match(/^(.*?[.!?。！？])(\s*)([\s\S]*)$/);
+  return m ? [m[1], m[3]] : [text, ''];
+}
+
+/**
+ * The verdict after someone searches or scans. Boxed and high-contrast so it can't be skimmed
+ * past: caution styling when nothing matched (an empty result is the moment people most need to
+ * read the caveat), calm styling when something did. role="status" so screen readers announce it.
+ */
+function ResultVerdict({ matched, T }) {
+  const none = matched === 0;
+  const [lead, rest] = splitLead(none ? T.nothingMatched : T.matchedCount(matched));
+  return (
+    <div role="status" className={`mt-2 rounded-lg border-2 p-3 ${none ? 'border-ochre bg-ochre/10' : 'border-inspection bg-inspection/10'}`}>
+      <p className="text-base"><span aria-hidden="true">{none ? '⚠️ ' : '✓ '}</span><span className="font-display font-extrabold">{lead}</span></p>
+      {rest && <p className="mt-1 text-sm">{rest}</p>}
+    </div>
   );
 }
 
@@ -462,11 +496,7 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
           {typed ? T.sortedForYou : T.activeNow}
           {loading && <span className="text-xs font-body font-normal text-slate">{T.stillChecking}</span>}
         </h2>
-        {typed && (
-          <p className="mt-1 text-sm text-slate">
-            {matched.length ? T.matchedCount(matched.length) : T.nothingMatched}
-          </p>
-        )}
+        {typed && <ResultVerdict matched={matched.length} T={T} />}
         {!typed && state?.archive?.available?.olderOpen > 0 && (
           <p className="mt-1 text-sm text-slate">{T.olderOpenNote(state.archive.available.olderOpen, Math.round((state.currentDays || 180) / 30))}</p>
         )}
@@ -555,55 +585,66 @@ function Scanner({ T, onClose, onRead }) {
     let zxControls = null;
     let stopped = false;
     const ok = (raw) => { if (!stopped && /^\d{8,14}$/.test(raw)) { stopped = true; onRead(raw); } };
+    const stopNative = () => { clearTimeout(timer); if (stream) { for (const t of stream.getTracks()) t.stop(); stream = null; } if (videoRef.current) videoRef.current.srcObject = null; };
 
-    (async () => {
-      // Path 1: the browser's built-in detector (Chrome/Edge on Android and ChromeOS, some desktops).
-      if ('BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia) {
-        try {
-          const detector = new window.BarcodeDetector({ formats: ['upc_a', 'upc_e', 'ean_13', 'ean_8'] });
-          // Probe: some desktops expose the class but the detection service is unavailable.
-          await detector.detect(document.createElement('canvas')).catch((e) => { if (e?.name === 'NotSupportedError') throw e; });
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-          if (stopped) return;
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-          setLoading(false);
-          const tick = async () => {
-            if (stopped) return;
-            try { const codes = await detector.detect(videoRef.current); const hit = codes.find((c) => /^\d{8,14}$/.test(c.rawValue)); if (hit) { ok(hit.rawValue); return; } } catch { /* frame errors are normal */ }
-            timer = setTimeout(tick, 250);
-          };
-          tick();
-          return;
-        } catch (e) {
-          if (e?.name === 'NotAllowedError') { setErr('denied'); setLoading(false); return; }
-          if (stream) { for (const t of stream.getTracks()) t.stop(); stream = null; }
-          // fall through to ZXing
-        }
-      }
-      // Path 2: vendored ZXing decoder — works in Windows/Mac desktop browsers and iPhone Safari.
+    // Path 2: vendored ZXing decoder — Windows/Mac desktop browsers, iPhone Safari, and any
+    // browser whose native detector exists but doesn't actually work.
+    const startZxing = async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error('no camera API');
         await loadZxing();
         if (stopped) return;
         const reader = new window.ZXingBrowser.BrowserMultiFormatReader();
-        zxControls = await window.ZXingBrowser.BrowserMultiFormatReader.prototype.decodeFromConstraints.call(
-          reader, { video: { facingMode: 'environment' }, audio: false }, videoRef.current,
+        zxControls = await reader.decodeFromConstraints({ video: { facingMode: 'environment' }, audio: false }, videoRef.current,
           (result) => { if (result) ok(result.getText()); });
         setLoading(false);
       } catch (e) {
         setErr(e?.name === 'NotAllowedError' ? 'denied' : 'unsupported');
         setLoading(false);
       }
+    };
+
+    (async () => {
+      // Path 1: the browser's built-in detector (works on Android Chrome/Edge and ChromeOS).
+      // Some desktops expose the class but every detect() rejects "service unavailable" —
+      // that must hand off to ZXing, not retry silently forever.
+      if ('BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia) {
+        try {
+          const detector = new window.BarcodeDetector({ formats: ['upc_a', 'upc_e', 'ean_13', 'ean_8'] });
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+          if (stopped) return;
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+          setLoading(false);
+          let failures = 0;
+          const tick = async () => {
+            if (stopped) return;
+            try {
+              const codes = await detector.detect(videoRef.current);
+              failures = 0;
+              const hit = codes.find((c) => /^\d{8,14}$/.test(c.rawValue));
+              if (hit) { ok(hit.rawValue); return; }
+            } catch (e) {
+              failures++;
+              if (e?.name === 'NotSupportedError' || failures >= 40) { stopNative(); startZxing(); return; }
+            }
+            timer = setTimeout(tick, 250);
+          };
+          tick();
+          return;
+        } catch (e) {
+          if (e?.name === 'NotAllowedError') { setErr('denied'); setLoading(false); return; }
+          stopNative();
+        }
+      }
+      startZxing();
     })();
 
     return () => {
       stopped = true;
-      clearTimeout(timer);
+      stopNative();
       if (zxControls) try { zxControls.stop(); } catch { /* already stopped */ }
-      if (stream) for (const t of stream.getTracks()) t.stop();
-      const v = videoRef.current;
-      const vs = v?.srcObject; if (vs) { for (const t of vs.getTracks()) t.stop(); v.srcObject = null; }
+      const vs = videoRef.current?.srcObject; if (vs) { for (const t of vs.getTracks()) t.stop(); }
     };
   }, []);
   return (
@@ -706,27 +747,67 @@ function AtRisk({ agent, allergens, guidance, T, lang }) {
  * Only one utterance plays at a time across the whole page: starting a new one cancels any
  * other, which fires that other button's onerror/onend and resets its own label back to Listen.
  */
+let voicesCache = null;
+/** Voices load asynchronously in Chrome; wait briefly for them rather than reading an empty list. */
+function loadVoices() {
+  const ss = window.speechSynthesis;
+  if (voicesCache?.length) return Promise.resolve(voicesCache);
+  return new Promise((resolve) => {
+    const got = () => { const v = ss.getVoices(); if (v.length) { voicesCache = v; resolve(v); return true; } return false; };
+    if (got()) return;
+    let done = false;
+    const onChange = () => { if (!done && got()) { done = true; } };
+    if (ss.addEventListener) ss.addEventListener('voiceschanged', onChange);
+    else ss.onvoiceschanged = onChange;
+    setTimeout(() => { if (!done) { done = true; resolve(ss.getVoices()); } }, 1500);
+  });
+}
+/** Exact tag match, then language-prefix match. Tagalog voices are tagged fil-* or tl-*. */
+function pickVoice(voices, tag) {
+  const t = tag.toLowerCase();
+  const prefixes = t.startsWith('fil') || t.startsWith('tl') ? ['fil', 'tl'] : [t.slice(0, 2)];
+  const norm = (v) => (v.lang || '').toLowerCase().replace('_', '-');
+  return voices.find((v) => norm(v) === t) || voices.find((v) => prefixes.some((p) => norm(v).startsWith(p))) || null;
+}
+
 function SpeakButton({ text, lang, T, size = 'sm' }) {
   const [speaking, setSpeaking] = useState(false);
+  const [noVoice, setNoVoice] = useState(false);
   useEffect(() => () => { try { window.speechSynthesis?.cancel(); } catch { /* already gone */ } }, []);
   const supported = typeof window !== 'undefined' && window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function';
   if (!supported || !text) return null;
-  const toggle = (e) => {
+  const toggle = async (e) => {
     e.stopPropagation();
-    if (speaking) { window.speechSynthesis.cancel(); setSpeaking(false); return; }
-    window.speechSynthesis.cancel();
-    const u = new window.SpeechSynthesisUtterance(text);
-    u.lang = langTag(lang);
-    u.onstart = () => setSpeaking(true);
-    u.onend = () => setSpeaking(false);
-    u.onerror = () => setSpeaking(false);
-    window.speechSynthesis.speak(u);
+    const ss = window.speechSynthesis;
+    if (speaking) { ss.cancel(); setSpeaking(false); return; }
+    ss.cancel();
+    const tag = langTag(lang);
+    const voice = pickVoice(await loadVoices(), tag);
+    if (!voice && lang !== 'en') {
+      // Say so rather than play silence: the device has no voice for this language.
+      setNoVoice(true); setTimeout(() => setNoVoice(false), 4000);
+    }
+    // Chrome cuts long utterances off around 15 s; queue one utterance per sentence instead.
+    const chunks = String(text).split(/(?<=[.!?。！？])\s+/).filter((c) => c.trim());
+    chunks.forEach((chunk, i) => {
+      const u = new window.SpeechSynthesisUtterance(chunk);
+      u.lang = tag;
+      if (voice) u.voice = voice;
+      if (i === 0) u.onstart = () => setSpeaking(true);
+      if (i === chunks.length - 1) u.onend = () => setSpeaking(false);
+      u.onerror = () => setSpeaking(false);
+      ss.speak(u);
+    });
   };
+  const langName = (LANGS.find((l) => l.code === lang) || LANGS[0]).label;
   return (
-    <button type="button" onClick={toggle} aria-pressed={speaking}
-      className={`min-h-[44px] ${size === 'lg' ? 'px-4' : 'px-3'} rounded-md border font-medium text-sm inline-flex items-center gap-1.5 ${speaking ? 'bg-ink text-paper border-ink' : 'border-stockdeep'}`}>
-      <span aria-hidden="true">{speaking ? '⏸' : '🔊'}</span> {speaking ? T.stopListening : T.listen}
-    </button>
+    <span className="inline-flex items-center gap-2 flex-wrap">
+      <button type="button" onClick={toggle} aria-pressed={speaking}
+        className={`min-h-[44px] ${size === 'lg' ? 'px-4' : 'px-3'} rounded-md border font-medium text-sm inline-flex items-center gap-1.5 ${speaking ? 'bg-ink text-paper border-ink' : 'border-stockdeep'}`}>
+        <span aria-hidden="true">{speaking ? '⏸' : '🔊'}</span> {speaking ? T.stopListening : T.listen}
+      </button>
+      {noVoice && <span role="status" className="text-xs text-ochre">{T.noVoice(langName)}</span>}
+    </span>
   );
 }
 
