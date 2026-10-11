@@ -44,6 +44,7 @@ function emptyState() {
     fsisLive: { attemptedAt: null, fetchedAt: null, added: 0, lastError: null },
     cdcCounts: null,
     archive: { incidents: [], loadedAt: null, loading: false, lastError: null, available: null },
+    history: { outbreaks: {}, loadedAt: null, loading: false, lastError: null, available: null },
     phase: 'idle',
   };
 }
@@ -100,6 +101,7 @@ export async function loadAll(onUpdate, opts = {}) {
     state.reviewQueue = snap.reviewQueue || [];
     state.cdcCounts = snap.cdcCounts || null;
     state.archive.available = snap.archive || null;
+    state.history.available = snap.history || null;
     state.currentDays = snap.currentDays || 180;
     state.parseHealth = snap.parseHealth || null;
     state.sources = snap.sources || {};
@@ -242,6 +244,24 @@ export async function loadArchive(state, opts = {}) {
     state.archive = { incidents: json.incidents || [], loadedAt: new Date().toISOString(), loading: false, lastError: null };
   } catch (err) {
     state.archive = { incidents: [], loadedAt: null, loading: false, lastError: { at: new Date().toISOString(), message: String(err.message || err) } };
+  }
+  return state;
+}
+
+/**
+ * Load history.json (per-outbreak count observations) on demand — when an incident with linked
+ * outbreaks or the Outbreaks page is open. One small request, once per page load.
+ * Mutates state: state.history = { outbreaks: { id: [obs...] }, loadedAt }.
+ */
+export async function loadHistory(state, opts = {}) {
+  if (state.history?.loadedAt || state.history?.loading) return state;
+  state.history = { ...(state.history || {}), loading: true };
+  try {
+    const { json, notFound } = await fetchJson(opts.historyUrl || './data/history.json', { timeoutMs: 15000 });
+    if (notFound) throw new Error('history file not found');
+    state.history = { ...state.history, outbreaks: json.outbreaks || {}, generatedAt: json.generatedAt || null, loadedAt: new Date().toISOString(), loading: false, lastError: null };
+  } catch (err) {
+    state.history = { ...state.history, outbreaks: {}, loadedAt: null, loading: false, lastError: { at: new Date().toISOString(), message: String(err.message || err) } };
   }
   return state;
 }

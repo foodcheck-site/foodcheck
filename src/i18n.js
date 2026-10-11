@@ -69,6 +69,22 @@ const STR = {
   details: { en: 'Details', es: 'Detalles', ko: '자세히', zh: '详情', vi: 'Chi tiết', tl: 'Mga detalye', ht: 'Detay' },
   noVoice: { en: (l) => `No ${l} voice on this device — a phone usually has one.`, es: (l) => `Este dispositivo no tiene voz en ${l}; un teléfono suele tenerla.`, ko: (l) => `이 기기에 ${l} 음성이 없습니다. 휴대폰에는 보통 있습니다.`, zh: (l) => `此设备没有${l}语音——手机通常有。`, vi: (l) => `Thiết bị này không có giọng ${l} — điện thoại thường có.`, tl: (l) => `Walang ${l} na boses sa device na ito — kadalasang mayroon ang telepono.`, ht: (l) => `Aparèy sa a pa gen vwa ${l} — yon telefòn anjeneral genyen l.` },
   startOver: { en: 'Start over', es: 'Empezar de nuevo', ko: '처음부터 다시', zh: '重新开始', vi: 'Bắt đầu lại', tl: 'Magsimula ulit', ht: 'Rekòmanse' },
+  // Simplified search (UX pass, Oct 2026): one box + scan; barcode/lot typed entry behind a fold.
+  searchBtn: { en: 'Search', es: 'Buscar', ko: '검색', zh: '搜索', vi: 'Tìm', tl: 'Hanapin', ht: 'Chèche' },
+  moreWays: { en: 'More ways to search', es: 'Más formas de buscar', ko: '다른 검색 방법', zh: '更多搜索方式', vi: 'Cách tìm khác', tl: 'Iba pang paraan ng paghahanap', ht: 'Lòt fason pou chèche' },
+  fewerWays: { en: 'Fewer ways', es: 'Menos opciones', ko: '접기', zh: '收起', vi: 'Thu gọn', tl: 'Itago', ht: 'Fèmen' },
+  recallsFor: { en: 'Recalls that affect', es: 'Retiros que afectan a', ko: '다음 주에 해당하는 리콜', zh: '影响以下州的召回', vi: 'Thu hồi ảnh hưởng đến', tl: 'Mga recall na may epekto sa', ht: 'Rapèl ki konsène' },
+  chooseState: { en: 'Choose your state', es: 'Elija su estado', ko: '거주하는 주 선택', zh: '选择您所在的州', vi: 'Chọn tiểu bang của bạn', tl: 'Piliin ang estado mo', ht: 'Chwazi eta ou' },
+  chooseStateWhy: { en: 'Some recalls were sold only in certain states. Choose yours to see those too.', es: 'Algunos retiros se vendieron solo en ciertos estados. Elija el suyo para verlos también.', ko: '일부 리콜은 특정 주에서만 판매되었습니다. 주를 선택하면 해당 리콜도 볼 수 있습니다.', zh: '有些召回产品只在部分州销售。选择您所在的州即可一并查看。', vi: 'Một số đợt thu hồi chỉ bán ở vài tiểu bang. Chọn tiểu bang của bạn để xem cả những đợt đó.', tl: 'May mga recall na ibinenta lang sa ilang estado. Piliin ang sa iyo para makita rin ang mga iyon.', ht: 'Gen rapèl ki te vann sèlman nan kèk eta. Chwazi pa ou a pou wè sa yo tou.' },
+  showMore: { en: (n) => `Show ${n} more`, es: (n) => `Ver ${n} más`, ko: (n) => `${n}개 더 보기`, zh: (n) => `再显示 ${n} 条`, vi: (n) => `Xem thêm ${n}`, tl: (n) => `Ipakita pa ang ${n}`, ht: (n) => `Montre ${n} anplis` },
+  showFewer: { en: 'Show fewer', es: 'Ver menos', ko: '줄여 보기', zh: '收起', vi: 'Thu gọn', tl: 'Ipakita nang mas kaunti', ht: 'Montre mwens' },
+  isThisYours: { en: 'Is this yours?', es: '¿Es el suyo?', ko: '이 제품인가요?', zh: '是您的吗？', vi: 'Có phải của bạn không?', tl: 'Sa iyo ba ito?', ht: 'Èske se pa ou a?' },
+  isThisYoursSub: { en: 'Compare the brand, the package, and the codes printed on it.', es: 'Compare la marca, el envase y los códigos impresos.', ko: '브랜드, 포장, 인쇄된 코드를 비교하세요.', zh: '请对照品牌、包装和印在上面的代码。', vi: 'So sánh nhãn hiệu, bao bì và các mã in trên đó.', tl: 'Ihambing ang brand, pakete, at mga code na nakalimbag dito.', ht: 'Konpare mak la, anbalaj la, ak kòd ki enprime sou li yo.' },
+  brandNotStated: { en: 'Brand not stated in the notice', es: 'La marca no aparece en el aviso', ko: '공지에 브랜드가 명시되지 않음', zh: '通告中未注明品牌', vi: 'Thông báo không nêu nhãn hiệu', tl: 'Walang nakasaad na brand sa abiso', ht: 'Avi a pa di ki mak' },
+  shareSearch: { en: 'Share this search', es: 'Compartir esta búsqueda', ko: '이 검색 공유', zh: '分享此搜索', vi: 'Chia sẻ tìm kiếm này', tl: 'Ibahagi ang paghahanap na ito', ht: 'Pataje rechèch sa a' },
+  rememberedNote: { en: 'Remembered on this device only.', es: 'Se guarda solo en este dispositivo.', ko: '이 기기에만 저장됩니다.', zh: '仅保存在此设备上。', vi: 'Chỉ lưu trên thiết bị này.', tl: 'Naaalala lang sa device na ito.', ht: 'Sonje sou aparèy sa a sèlman.' },
+  upcAsPrinted: { en: 'as printed in the notice; may contain a typo', es: 'tal como aparece en el aviso; puede tener un error', ko: '공지에 인쇄된 그대로이며 오타가 있을 수 있음', zh: '按通告原样显示；可能有错字', vi: 'như in trong thông báo; có thể có lỗi đánh máy', tl: 'ayon sa nakalimbag sa abiso; maaaring may typo', ht: 'jan li ekri nan avi a; ka gen yon erè' },
+  otherStatesFold: { en: (n) => `Sold only in other states (${n})`, es: (n) => `Vendidos solo en otros estados (${n})`, ko: (n) => `다른 주에서만 판매됨 (${n})`, zh: (n) => `仅在其他州销售 (${n})`, vi: (n) => `Chỉ bán ở tiểu bang khác (${n})`, tl: (n) => `Ibinenta lang sa ibang estado (${n})`, ht: (n) => `Vann sèlman nan lòt eta (${n})` },
   listen: { en: 'Listen', es: 'Escuchar', ko: '듣기', zh: '朗读', vi: 'Nghe', tl: 'Pakinggan', ht: 'Koute' },
   stopListening: { en: 'Stop', es: 'Detener', ko: '정지', zh: '停止', vi: 'Dừng', tl: 'Ihinto', ht: 'Sispann' },
   scanTitle: { en: 'Scan the barcode', es: 'Escanee el código de barras', ko: '바코드를 스캔하세요', zh: '扫描条形码' },
@@ -268,6 +284,12 @@ Object.assign(STR, {
   obHosp: { en: (n) => `${n} hospitalized`, es: (n) => `${n} hospitalizadas`, ko: (n) => `${n}명 입원`, zh: (n) => `${n} 人住院` },
   obDied: { en: (n) => `${n} died`, es: (n) => `${n} fallecieron`, ko: (n) => `${n}명 사망`, zh: (n) => `${n} 人死亡` },
   obSeeAdv: { en: 'case count — see advisory', es: 'número de casos: vea el aviso', ko: '환자 수 — 권고문 참조', zh: '病例数——见公告' },
+  // Outbreak count history (data/history.json): what FDA's table said on the dates we checked.
+  histHead: { en: 'Count over time', es: 'Cifras a lo largo del tiempo', ko: '시간에 따른 환자 수', zh: '病例数变化', vi: 'Số ca theo thời gian', tl: 'Bilang sa paglipas ng panahon', ht: 'Kantite a sou tan' },
+  histSince: { en: (d) => `Tracking since ${d}; no change recorded yet.`, es: (d) => `Seguimiento desde ${d}; aún sin cambios registrados.`, ko: (d) => `${d}부터 추적 중이며 아직 변동이 기록되지 않았습니다.`, zh: (d) => `自 ${d} 起跟踪；尚未记录到变化。`, vi: (d) => `Theo dõi từ ${d}; chưa ghi nhận thay đổi.`, tl: (d) => `Sinusubaybayan mula ${d}; wala pang naitalang pagbabago.`, ht: (d) => `N ap swiv depi ${d}; poko gen chanjman anrejistre.` },
+  histNote: { en: 'Counts as FDA posted them on the dates we checked. Agencies revise counts as cases are confirmed, so a number can go up or down.', es: 'Cifras tal como la FDA las publicó en las fechas en que consultamos. Las agencias revisan las cifras a medida que confirman casos, así que un número puede subir o bajar.', ko: '저희가 확인한 날짜에 FDA가 게시한 수치입니다. 기관은 확진에 따라 수치를 수정하므로 숫자가 늘거나 줄 수 있습니다.', zh: '这些是我们查看当日 FDA 公布的数字。机构会随着病例确认而修订数字，因此数字可能增加也可能减少。', vi: 'Số liệu đúng như FDA đăng vào những ngày chúng tôi kiểm tra. Các cơ quan điều chỉnh số liệu khi xác nhận ca bệnh, nên con số có thể tăng hoặc giảm.', tl: 'Mga bilang ayon sa inilathala ng FDA sa mga petsang sinuri namin. Binabago ng mga ahensya ang bilang habang kinukumpirma ang mga kaso, kaya maaaring tumaas o bumaba ang numero.', ht: 'Kantite yo jan FDA te pibliye yo nan dat nou te tcheke yo. Ajans yo revize kantite yo pandan y ap konfime ka yo, kidonk yon chif ka monte oswa desann.' },
+  histEnded: { en: 'investigation ended', es: 'investigación concluida', ko: '조사 종료', zh: '调查结束', vi: 'đã kết thúc điều tra', tl: 'natapos ang imbestigasyon', ht: 'ankèt la fini' },
+  histFailed: { en: 'Count history couldn’t load.', es: 'No se pudo cargar el historial de cifras.', ko: '환자 수 이력을 불러오지 못했습니다.', zh: '无法加载病例数历史。', vi: 'Không tải được lịch sử số ca.', tl: 'Hindi ma-load ang kasaysayan ng bilang.', ht: 'Istwa kantite a pa t ka chaje.' },
   obConnected: { en: 'Recalls we’ve connected:', es: 'Retiros que hemos conectado:', ko: '연결한 리콜:', zh: '我们关联的召回：' },
   obAdvisory: { en: 'FDA’s advisory for this outbreak', es: 'Aviso de la FDA sobre este brote (en inglés)', ko: '이 집단감염에 대한 FDA 권고문 (영어)', zh: '此疫情的 FDA 公告（英文）' },
   obNoAdvisory: { en: 'No advisory yet — FDA hasn’t identified a product or given consumer advice for this one.', es: 'Aún no hay aviso: la FDA no ha identificado un producto ni dado recomendaciones para este caso.', ko: '아직 권고문이 없습니다. FDA가 제품을 특정하거나 소비자 지침을 내지 않았습니다.', zh: '尚无公告——FDA 尚未确定产品，也未给出消费者建议。' },
@@ -771,6 +793,25 @@ export function plainSentenceFor(lang, inc, stateLabel) {
     },
   };
   return (L[lang] || L.en)();
+}
+
+/** The food category of an incident, capitalized, in the given language ("Leafy greens"). */
+export function foodLabelFor(lang, parts) {
+  if (!parts) return null;
+  return cap(pick(CATS, parts.category || 'other', lang));
+}
+
+/** The hazard of an incident, short, in the given language ("Listeria", "Undeclared milk"). */
+export function hazardLabelFor(lang, parts) {
+  if (!parts) return null;
+  if (parts.agent && parts.agent.startsWith('undeclared_')) {
+    const keys = (parts.allergens?.length ? parts.allergens : [parts.agent.slice('undeclared_'.length)]);
+    const names = keys.map((k) => pick(ALLERGEN_I18N, ALLERGEN_KEY[k] || k, lang));
+    const joiner = { en: ' and ', es: ' y ', ko: '·', zh: '和' }[lang] || ' and ';
+    return (UNDECLARED[lang] || UNDECLARED.en)(names.join(joiner));
+  }
+  if (parts.agent) return pick(AGENTS, parts.agent, lang);
+  return { en: 'Unread hazard', es: 'Riesgo sin clasificar', ko: '미확인 위해요소', zh: '未识别的危害' }[lang] || 'Unread hazard';
 }
 
 export function incidentTitleFor(lang, parts, fallback) {

@@ -1,14 +1,15 @@
-// app.jsx — FoodCheck core UI. React 18 (UMD globals) + Tailwind utilities. No browser storage.
+// app.jsx — FoodCheck core UI. React 18 (UMD globals) + Tailwind utilities. The only browser
+// storage is two localStorage keys (state, language) so a returning reader isn't asked twice.
 // Part 2 scope: first paint, narrow-it-down inputs, result language, incident screen.
 // Part 3 adds: URL routing, All active, Outbreaks, About the data, review queue, not-found.
 
 // Import paths are relative to index.html, not to this file: Babel standalone transforms this
 // file and runs it as an inline module on the page, so the page's URL is the base.
-import { loadAll, loadArchive, freshnessLines, resolveIncident, SOURCE_LABEL } from './src/data/live.js';
+import { loadAll, loadArchive, loadHistory, freshnessLines, resolveIncident, SOURCE_LABEL } from './src/data/live.js';
 import { agentLabel } from './src/i18n.js';
 import { orderIncidents, evaluate, normalizeStateInput, normalizeUpcInput, normalizeLotInput, upcInputState, scopeLabel, stateName, SEVERITY_RANK, isCurrent } from './src/data/match.js';
 import { STATES, DISPOSAL_COPY, ALLERGEN_LABEL } from './src/data/parse.js';
-import { t as makeT, LANGS, langTag, incidentTitleFor, plainSentenceFor } from './src/i18n.js';
+import { t as makeT, LANGS, langTag, incidentTitleFor, plainSentenceFor, foodLabelFor, hazardLabelFor } from './src/i18n.js';
 
 const { useState, useEffect, useMemo, useRef } = React;
 
@@ -227,147 +228,127 @@ function BlindSpotBar({ state, T }) {
   );
 }
 
-// ---------- narrow it down ----------
-// Tile-grid US map: each state a labeled 44px square in roughly geographic position. A traced
-// outline map would put fifty sub-44px targets on a phone; tiles keep the touch floor and stay
-// screen-reader friendly (each is a real button named with the full state name).
-const TILE_MAP = [
-  ['AK', 0, 0], ['ME', 10, 0],
-  ['WA', 0, 1], ['MT', 1, 1], ['ND', 2, 1], ['MN', 3, 1], ['WI', 4, 1], ['MI', 6, 1], ['NY', 8, 1], ['VT', 9, 1], ['NH', 10, 1],
-  ['OR', 0, 2], ['ID', 1, 2], ['SD', 2, 2], ['IA', 3, 2], ['IL', 4, 2], ['IN', 5, 2], ['OH', 6, 2], ['PA', 7, 2], ['NJ', 8, 2], ['CT', 9, 2], ['MA', 10, 2],
-  ['CA', 0, 3], ['NV', 1, 3], ['WY', 2, 3], ['NE', 3, 3], ['MO', 4, 3], ['KY', 5, 3], ['WV', 6, 3], ['VA', 7, 3], ['MD', 8, 3], ['DE', 9, 3], ['RI', 10, 3],
-  ['AZ', 1, 4], ['UT', 2, 4], ['CO', 3, 4], ['KS', 4, 4], ['AR', 5, 4], ['TN', 6, 4], ['NC', 7, 4], ['SC', 8, 4], ['DC', 9, 4],
-  ['NM', 2, 5], ['OK', 3, 5], ['LA', 4, 5], ['MS', 5, 5], ['AL', 6, 5], ['GA', 7, 5],
-  ['HI', 0, 6], ['TX', 3, 6], ['FL', 8, 6], ['PR', 10, 6],
-];
+// ---------- search ----------
+// One question, one box. The October 2026 UX pass replaced a four-field "narrow it down" panel
+// (state + product + barcode + lot, all at once) with the thing people actually do: type a product
+// or scan it. Barcode and lot-code typed entry still exist behind "More ways to search"; the
+// state is its own one-line row above the list. Nothing was removed from the URL contract.
+const EMPTY_INPUTS = { state: null, query: '', upc: '', lot: '' };
+const FIELD = 'w-full min-h-[52px] rounded-lg border-2 border-ink bg-paper px-3 py-2 text-lg placeholder:text-slate';
 
-function StateTileMap({ selected, onPick, T }) {
-  const cols = 11, rows = 7;
+function SearchBox({ inputs, setInputs, id, T, onSearch }) {
+  const [more, setMore] = useState(!!(inputs.upc.trim() || (inputs.lot || '').trim()));
+  const [scanning, setScanning] = useState(false);
+  const typedAny = !!(inputs.query.trim() || inputs.upc.trim() || (inputs.lot || '').trim());
+  const digits = normalizeUpcInput(inputs.upc);
+  const upcState = upcInputState(digits);
+  const upcHint = upcState === 'too_short' ? T.keepTyping : upcState === 'prefix' ? T.partialUpc : upcState === 'too_long' ? T.tooLongUpc : '';
   return (
-    <div className="overflow-x-auto" role="group" aria-label={T.mapLabel}>
-      <div className="relative" style={{ width: cols * 48, height: rows * 48 }}>
-        {TILE_MAP.map(([code, c, r]) => {
-          const sel = selected === code;
-          return (
-            <button key={code} type="button" onClick={() => onPick(sel ? null : code)} aria-pressed={sel}
-              aria-label={stateName(code)} title={stateName(code)}
-              className={`absolute w-11 h-11 rounded font-mono text-xs font-bold flex items-center justify-center border focus:outline-2 focus:outline-inspection ${sel ? 'bg-ink text-paper border-ink' : 'bg-paper border-stockdeep text-ink hover:border-ink'}`}
-              style={{ left: c * 48, top: r * 48 }} translate="no">{code}</button>
-          );
-        })}
+    <form id={id} className="mt-4" onSubmit={(e) => { e.preventDefault(); onSearch(); }} role="search" aria-label={T.whatsInKitchen}>
+      {scanning && <Scanner T={T} onClose={() => setScanning(false)} onRead={(d) => { setInputs({ ...inputs, upc: d }); setScanning(false); setMore(true); onSearch(); }} />}
+      <label className="block">
+        <span className="block font-display text-lg font-extrabold">{T.whatsInKitchen}</span>
+        <span className="block text-sm text-slate mb-2">{T.kitchenHint}</span>
+        <input className={FIELD} type="search" autoComplete="off" placeholder={T.kitchenPlaceholder} value={inputs.query} onChange={(e) => setInputs({ ...inputs, query: e.target.value })} />
+      </label>
+      <div className="mt-2 flex gap-2 flex-wrap">
+        <button type="submit" className="flex-1 min-w-[8rem] min-h-[52px] rounded-lg bg-ink text-paper px-4 text-base font-bold">{T.searchBtn}</button>
+        <button type="button" onClick={() => setScanning(true)} className="flex-1 min-w-[8rem] min-h-[52px] rounded-lg border-2 border-ink px-4 text-base font-bold">📷 {T.scan}</button>
+        {typedAny && <button type="button" onClick={() => setInputs({ ...inputs, query: '', upc: '', lot: '' })} className="min-h-[52px] px-3 rounded-lg border border-stockdeep text-sm font-medium">✕ {T.startOver}</button>}
       </div>
-      <p className="mt-1 text-xs text-slate">{T.mapHint}</p>
+      <button type="button" onClick={() => setMore(!more)} aria-expanded={more} className="mt-2 min-h-[44px] text-sm text-inspection underline underline-offset-2">{more ? T.fewerWays : T.moreWays} {more ? '▴' : '▾'}</button>
+      {more && (
+        <div className="mt-1 grid gap-3 sm:grid-cols-2 rounded-lg bg-stock p-3">
+          <label className="block">
+            <span className="block text-sm font-medium mb-1">{T.barcodeLabel}</span>
+            <input className={`${FIELD} font-mono text-base min-h-[44px]`} translate="no" inputMode="numeric" pattern="[0-9 -]*" placeholder={T.barcodePlaceholder} value={inputs.upc} onChange={(e) => setInputs({ ...inputs, upc: e.target.value })} aria-describedby={`${id}-upc-hint`} />
+            <span id={`${id}-upc-hint`} className="mt-1 block text-xs text-slate min-h-[1rem]">{upcHint || T.barcodeHint}</span>
+          </label>
+          <label className="block">
+            <span className="block text-sm font-medium mb-1">{T.lotLabel}</span>
+            <input className={`${FIELD} font-mono text-base min-h-[44px]`} translate="no" placeholder={T.lotPlaceholder} value={inputs.lot || ''} onChange={(e) => setInputs({ ...inputs, lot: e.target.value })} />
+            <span className="mt-1 block text-xs text-slate">{T.lotHint}</span>
+          </label>
+        </div>
+      )}
+    </form>
+  );
+}
+
+/** "Recalls that affect: [Florida ▾]" — the select is the change control, so there is no second mode. */
+function StateRow({ inputs, setInputs, T }) {
+  const has = !!inputs.state;
+  return (
+    <div className={`mt-4 rounded-lg p-3 flex items-center gap-3 flex-wrap ${has ? 'bg-stock border-2 border-ink' : 'bg-stock'}`}>
+      <span aria-hidden="true" className="text-xl">📍</span>
+      <label className="flex-1 min-w-[12rem]">
+        <span className="block text-sm text-slate">{has ? T.recallsFor : T.chooseState}</span>
+        <select className="mt-0.5 w-full min-h-[44px] rounded-md border border-stockdeep bg-paper px-2 text-lg font-bold" value={inputs.state || ''} onChange={(e) => setInputs({ ...inputs, state: e.target.value || null })}>
+          <option value="">{T.skipState}</option>
+          {Object.entries(STATES).sort((a, b) => a[0].localeCompare(b[0])).map(([name, code]) => (
+            <option key={code} value={code}>{name.replace(/\b\w/g, (c) => c.toUpperCase())}</option>
+          ))}
+        </select>
+      </label>
+      <p className="w-full text-xs text-slate">{has ? `${T.stateHint} ${T.rememberedNote}` : T.chooseStateWhy}</p>
     </div>
   );
 }
 
-const EMPTY_INPUTS = { state: null, query: '', upc: '', lot: '' };
-
-function NarrowStrip({ inputs, setInputs, id, T, collapsible = false, forceOpen = false }) {
-  const typedAny = !!(inputs.state || inputs.query.trim() || inputs.upc.trim() || (inputs.lot || '').trim());
-  const [open, setOpen] = useState(true);
-  const [showMap, setShowMap] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const isOpen = !collapsible || open || forceOpen || typedAny;
-  const digits = normalizeUpcInput(inputs.upc);
-  const upcState = upcInputState(digits);
-  const upcHint = upcState === 'too_short' ? T.keepTyping
-    : upcState === 'prefix' ? T.partialUpc
-    : upcState === 'too_long' ? T.tooLongUpc
-    : '';
-  const field = 'w-full min-h-[44px] rounded-md border border-stockdeep bg-paper px-3 py-2 text-base placeholder:text-slate';
-  if (!isOpen) {
-    return (
-      <section id={id} className="rounded-lg bg-stock">
-        <button type="button" onClick={() => setOpen(true)} aria-expanded={false} className="min-h-[48px] w-full flex items-center justify-between px-4 text-left">
-          <span><span className="font-display font-extrabold">{T.narrowDown}</span><span className="text-sm text-slate"> — {T.narrowOneLine}</span></span>
-          <span aria-hidden="true">▾</span>
-        </button>
-      </section>
-    );
-  }
-  return (
-    <section id={id} aria-labelledby={`${id}-h`} className="rounded-lg bg-stock p-4">
-      <span className="flex items-baseline justify-between">
-        <h2 id={`${id}-h`} className="font-display text-lg font-extrabold">{T.narrowDown}</h2>
-        {collapsible && !typedAny && <button type="button" onClick={() => setOpen(false)} aria-expanded={true} className="min-h-[44px] px-2 text-slate">▴</button>}
-        {typedAny && <button type="button" onClick={() => setInputs({ ...EMPTY_INPUTS })} className="min-h-[44px] px-3 rounded-md border border-ink text-sm font-medium">✕ {T.startOver}</button>}
-      </span>
-      <p className="mt-1 text-sm text-slate">{T.narrowSub}</p>
-      {scanning && <Scanner T={T} onClose={() => setScanning(false)} onRead={(d) => { setInputs({ ...inputs, upc: d }); setScanning(false); setTimeout(() => document.getElementById('active-h')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} />}
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <label className="block">
-          <span className="block text-sm font-medium mb-1">{T.whereAreYou}</span>
-          <select className={field} value={inputs.state || ''} onChange={(e) => setInputs({ ...inputs, state: e.target.value || null })}>
-            <option value="">{T.skipState}</option>
-            {Object.entries(STATES).sort((a, b) => a[0].localeCompare(b[0])).map(([name, code]) => (
-              <option key={code} value={code}>{name.replace(/\b\w/g, (c) => c.toUpperCase())}</option>
-            ))}
-          </select>
-          <span className="mt-1 block text-xs text-slate">{T.stateHint}</span>
-          <button type="button" onClick={() => setShowMap(!showMap)} aria-expanded={showMap} className="mt-1 min-h-[44px] text-sm text-inspection underline underline-offset-2">{T.mapToggle}</button>
-        </label>
-        <label className="block">
-          <span className="block text-sm font-medium mb-1">{T.whatsInKitchen}</span>
-          <input className={field} type="search" placeholder={T.kitchenPlaceholder} value={inputs.query} onChange={(e) => setInputs({ ...inputs, query: e.target.value })} />
-          <span className="mt-1 block text-xs text-slate">{T.kitchenHint}</span>
-        </label>
-        <label className="block">
-          <span className="block text-sm font-medium mb-1">{T.barcodeLabel}</span>
-          <span className="flex gap-2">
-            <input className={`${field} font-mono`} translate="no" inputMode="numeric" pattern="[0-9 -]*" placeholder={T.barcodePlaceholder} value={inputs.upc} onChange={(e) => setInputs({ ...inputs, upc: e.target.value })} aria-describedby={`${id}-upc-hint`} />
-            <button type="button" onClick={() => setScanning(true)} className="min-h-[44px] shrink-0 px-3 rounded-md border border-stockdeep font-medium">📷 {T.scan}</button>
-          </span>
-          <span id={`${id}-upc-hint`} className="mt-1 block text-xs text-slate min-h-[1rem]">{upcHint || T.barcodeHint}</span>
-        </label>
-        <label className="block">
-          <span className="block text-sm font-medium mb-1">{T.lotLabel}</span>
-          <input className={`${field} font-mono`} translate="no" placeholder={T.lotPlaceholder} value={inputs.lot || ''} onChange={(e) => setInputs({ ...inputs, lot: e.target.value })} />
-          <span className="mt-1 block text-xs text-slate">{T.lotHint}</span>
-        </label>
-      </div>
-      {showMap && <div className="mt-3"><StateTileMap selected={inputs.state} onPick={(code) => setInputs({ ...inputs, state: code })} T={T} /></div>}
-    </section>
-  );
+// ---------- cards ----------
+/** Short severity chip for lists: glyph + plain meaning ("■ Serious harm possible"). Shape differs per level so color is never the only signal. */
+function SevChip({ severity, T }) {
+  const s = SEVERITY[severity] || SEVERITY.unclassified;
+  const x = sevText(T, severity);
+  return <span className={`inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide ${s.text}`}><span aria-hidden="true">{s.glyph}</span>{x.meaning}</span>;
 }
 
-// ---------- cards ----------
-function IncidentCard({ row, onOpen, T, lang, archived = false }) {
+function IncidentCard({ row, onOpen, T, lang, recalls, archived = false }) {
   const { incident: inc, match } = row;
   const s = SEVERITY[inc.severity] || SEVERITY.unclassified;
   const mt = matchText(T, match);
   const closed = archived && inc.status !== 'active';
   const olderOpen = archived && inc.status === 'active';
-  // 'nationwide' with a state selected would just repeat the scope line, so it gets no headline.
-  const hasMatch = match.matchBasis !== 'none' && match.matchBasis !== 'nationwide';
+  const hasMatch = !['none', 'nationwide', 'state_only'].includes(match.matchBasis);
   const sample = row.sample;
   const [showDetails, setShowDetails] = useState(false);
-  // Plain-sentence-first: the first thing anyone sees is one sentence a ten-year-old could read.
-  // Everything else (badge, agency, counts, dates) waits behind "Details". Nothing is removed —
-  // it's the same collapse-don't-remove rule as the fold, applied inside the card.
+  // Food first. The October 2026 UX pass flipped the card: people scan a list for the food they
+  // own, not for the hazard sentence. Headline = the product when one notice names it briefly,
+  // else the food category in their language; second line = hazard · where sold. The plain
+  // sentence and full title still exist behind Details (collapse, never remove).
+  const children = recalls ? inc.recallIds.map((id) => recalls.get(id)).filter(Boolean) : [];
+  const single = children.length === 1 ? children[0] : null;
+  const desc = single?.product?.rawDescription || '';
+  const useDesc = single && desc.length > 0 && desc.length <= 70;
+  // "Several foods" says nothing; list the actual categories across the notices instead.
+  const catsAcross = (() => {
+    if (inc.titleParts?.category !== 'several' || !children.length) return null;
+    const raw = [...new Set(children.map((c) => c.product.categoryGuess).filter(Boolean))];
+    const cats = (raw.length > 1 ? raw.filter((c) => c !== 'other') : raw).map((c) => foodLabelFor(lang, { category: c }));
+    return cats.length ? (cats.slice(0, 3).join(', ') + (cats.length > 3 ? ` +${cats.length - 3}` : '')) : null;
+  })();
+  const headline = useDesc ? desc : (catsAcross || foodLabelFor(lang, inc.titleParts) || incidentTitleFor(lang, inc.titleParts, inc.title));
+  const headlineEn = useDesc || (!inc.titleParts && lang !== 'en');
+  const who = inc.titleParts?.whoKind === 'firm' ? inc.titleParts.who : (single?.firm?.raw || null);
+  const hazard = hazardLabelFor(lang, inc.titleParts) || inc.agentLabel || '';
   const plain = plainSentenceFor(lang, inc, inc.scope === 'single_state' ? stateName(inc.statesUnion[0]) : null);
   const title = incidentTitleFor(lang, inc.titleParts, inc.title);
   const sevMeaning = sevText(T, inc.severity);
-  const cardSpeech = [plain || title, plain ? title : sevMeaning.one, hasMatch && mt.line ? mt.line : null].filter(Boolean).join('. ');
+  const cardSpeech = [headline, plain || sevMeaning.one, hasMatch && mt.line ? mt.line : null].filter(Boolean).join('. ');
   return (
     <li className={`fade-in rounded-lg bg-stock ${s.edge}`}>
       <button type="button" onClick={() => onOpen(inc.id)} className="block w-full text-left p-4 pl-5 pb-2 min-h-[44px] rounded-lg hover:bg-stockdeep/60">
-        {(closed || olderOpen || sample) && (
-          <span className="flex gap-2 mb-1">
-            {closed && <span className="text-xs font-mono uppercase tracking-wider text-slate border border-slate rounded px-1">{T.closedTag}</span>}
-            {olderOpen && <span className="text-xs font-mono uppercase tracking-wider text-slate border border-slate rounded px-1">{T.openTag(fmtDay(inc.lastNoticeDate || inc.firstInitiated))}</span>}
-            {sample && <span className="text-xs font-mono uppercase tracking-wider text-ochre border border-ochre rounded px-1">{T.sampleTag}</span>}
-          </span>
-        )}
-        {hasMatch && (
-          <p className={`font-display text-lg font-extrabold leading-tight ${match.matchBasis === 'upc' ? 'text-stamp' : match.matchBasis === 'other_state' ? 'text-slate' : ''}`}>{mt.headline}</p>
-        )}
-        {plain
-          ? <>
-              <p className={`${hasMatch ? 'mt-1 text-lg' : 'text-xl'} font-display font-extrabold leading-snug`}>{plain}</p>
-              <p className="mt-1 text-sm text-slate" lang={!inc.titleParts && lang !== 'en' ? 'en' : undefined}>{title}</p>
-            </>
-          : <p lang={lang !== 'en' ? 'en' : undefined} className={`${hasMatch ? 'mt-0.5 text-base' : 'font-display text-lg font-extrabold leading-tight'}`}>{title}</p>}
+        <span className="flex gap-2 items-center flex-wrap text-xs text-slate">
+          <SevChip severity={inc.severity} T={T} />
+          {inc.lastUpdated && <span>· {fmtDay(inc.lastUpdated)}</span>}
+          {closed && <span className="font-mono uppercase tracking-wider border border-slate rounded px-1">{T.closedTag}</span>}
+          {olderOpen && <span className="font-mono uppercase tracking-wider border border-slate rounded px-1">{T.openTag(fmtDay(inc.lastNoticeDate || inc.firstInitiated))}</span>}
+          {sample && <span className="font-mono uppercase tracking-wider text-ochre border border-ochre rounded px-1">{T.sampleTag}</span>}
+        </span>
+        <p lang={headlineEn ? 'en' : undefined} className="mt-1 font-display text-xl font-extrabold leading-snug">{headline}</p>
+        {who && <p className="text-sm text-slate" lang="en">{who}</p>}
+        <p className="mt-1 text-base">{hazard} · {scopeLabelT(T, inc)}</p>
+        {hasMatch && <p className={`mt-1 text-base font-bold ${match.matchBasis === 'upc' ? 'text-stamp' : match.matchBasis === 'other_state' ? 'text-slate' : 'text-inspection'}`}>{mt.headline}</p>}
         <span className="mt-2 inline-block text-inspection font-medium">{T.whatToDo}</span>
       </button>
       {/* Siblings, not nested — buttons inside the card's open-button would be invalid HTML and
@@ -378,14 +359,15 @@ function IncidentCard({ row, onOpen, T, lang, archived = false }) {
       </div>
       {showDetails && (
         <div className="px-4 pl-5 pb-4 -mt-1 text-sm">
-          <SeverityBadge severity={inc.severity} T={T} />
+          {plain && <p className="text-base font-medium">{plain}</p>}
+          <p className="mt-1 text-slate" lang={!inc.titleParts && lang !== 'en' ? 'en' : undefined}>{title}</p>
+          <p className="mt-2"><SeverityBadge severity={inc.severity} T={T} /></p>
           <p className="mt-1">{sevMeaning.one}</p>
           {hasMatch && mt.line && <p className="mt-1 text-slate">{mt.line}</p>}
           <p className="mt-2 text-slate flex flex-wrap gap-x-3 gap-y-0.5">
-            <span>{scopeLabelT(T, inc)}{inc.distributionIncomplete && inc.scope !== 'nationwide' ? ` · ${T.listIncomplete}` : ''}</span>
+            <span>{inc.distributionIncomplete && inc.scope !== 'nationwide' ? T.listIncomplete : null}</span>
             <span>{T.notices(inc.recallIds.length)} · {inc.agencies.map((a) => a === 'FSIS' ? 'USDA' : a).join(' + ')}</span>
             {inc.illnessSummary?.cases ? <span className="text-ink font-medium">{T.illnesses(inc.illnessSummary.cases)}</span> : null}
-            {inc.lastUpdated && <span>{fmtDay(inc.lastUpdated)}</span>}
           </p>
         </div>
       )}
@@ -404,14 +386,18 @@ function splitLead(text) {
  * past: caution styling when nothing matched (an empty result is the moment people most need to
  * read the caveat), calm styling when something did. role="status" so screen readers announce it.
  */
-function ResultVerdict({ matched, T, onClear }) {
+function ResultVerdict({ matched, T, onClear, shareLabel }) {
   const none = matched === 0;
   const [lead, rest] = splitLead(none ? T.nothingMatched : T.matchedCount(matched));
   return (
     <div role="status" className={`mt-2 rounded-lg border-2 p-3 ${none ? 'border-ochre bg-ochre/10' : 'border-inspection bg-inspection/10'}`}>
       <p className="text-base"><span aria-hidden="true">{none ? '⚠️ ' : '✓ '}</span><span className="font-display font-extrabold">{lead}</span></p>
       {rest && <p className="mt-1 text-sm">{rest}</p>}
-      {onClear && <button type="button" onClick={onClear} className="mt-3 min-h-[44px] px-4 rounded-md bg-ink text-paper text-sm font-medium">✕ {T.startOver}</button>}
+      <p className="mt-3 flex gap-2 flex-wrap">
+        {onClear && <button type="button" onClick={onClear} className="min-h-[44px] px-4 rounded-md bg-ink text-paper text-sm font-medium">✕ {T.startOver}</button>}
+        {/* The link is the share: state, words, barcode all travel in the URL, nothing on a server. */}
+        {shareLabel && <ShareButton title={shareLabel} label={shareLabel} T={T} />}
+      </p>
     </div>
   );
 }
@@ -426,7 +412,8 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
     return r;
   }, [state, inputs]);
   const [showMinor, setShowMinor] = useState(false);
-  const typed = inputs.state || inputs.query.trim() || normalizeUpcInput(inputs.upc).length >= 6 || normalizeLotInput(inputs.lot).length >= 4;
+  const typedProduct = !!(inputs.query.trim() || normalizeUpcInput(inputs.upc).length >= 6 || normalizeLotInput(inputs.lot).length >= 4);
+  const typed = !!inputs.state || typedProduct;
   const matched = rows.filter((r) => r.match.matchBasis !== 'none' && r.match.matchBasis !== 'other_state');
   const loading = state && state.phase !== 'done';
 
@@ -452,7 +439,11 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
   const anyRelevant = rows.some(isRelevant);
   const foldActive = typed && anyRelevant && rows.some((r) => !isRelevant(r));
   const [foldOpen, setFoldOpen] = useState(false);
-  useEffect(() => { setFoldOpen(false); }, [inputs.state, inputs.query, inputs.upc, inputs.lot]);
+  // The main list shows a page at a time. "Show N more" is a counted fold, not a filter: the
+  // count is on screen, and one tap reveals everything — the same collapse-don't-remove rule.
+  const PAGE = 6;
+  const [showAll, setShowAll] = useState(false);
+  useEffect(() => { setFoldOpen(false); setShowAll(false); }, [inputs.state, inputs.query, inputs.upc, inputs.lot]);
   const relevantRows = foldActive ? rows.filter(isRelevant) : rows;
   const foldedRows = foldActive ? rows.filter((r) => !isRelevant(r)) : [];
 
@@ -460,6 +451,8 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
   // hide a direct hit); with no inputs, Class III folds as before.
   const major = relevantRows.filter((r) => r.incident.severity !== 'class_3' || foldActive);
   const minor = foldActive ? [] : relevantRows.filter((r) => r.incident.severity === 'class_3');
+  const majorShown = showAll ? major : major.slice(0, PAGE);
+  const scrollToList = () => document.getElementById('active-h')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   const closedRows = useMemo(() => {
     if (!state?.archive?.loadedAt || !wantsArchive) return [];
@@ -468,8 +461,8 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
 
   useEffect(() => {
     if (!state || state.phase !== 'done') return;
-    if (foldActive) announce(`${relevantRows.length} ${relevantRows.length === 1 ? 'recall matches' : 'recalls match'}; ${foldedRows.length} collapsed below.`);
-    else if (typed) announce('Nothing matched; showing everything active.');
+    if (foldActive && typedProduct) announce(`${relevantRows.length} ${relevantRows.length === 1 ? 'recall matches' : 'recalls match'}; ${foldedRows.length} collapsed below.`);
+    else if (typedProduct) announce('Nothing matched; showing everything active.');
   }, [inputs.state, inputs.query, inputs.upc, inputs.lot]);
 
   useEffect(() => {
@@ -489,19 +482,22 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
             <button type="button" onClick={onOutbreaks} className="min-h-[44px] rounded-md bg-inspection text-paper px-3 text-sm font-medium">{T.checkOutbreaks(state?.outbreaks?.length ? state.outbreaks.filter((o) => o.status === 'active').length : 0)}</button>
           </span>
         </div>
-        <Stamp state={state} onAbout={onAbout} T={T} />
-        <BlindSpotBar state={state} T={T} />
       </header>
 
-      <div className="mt-3"><NarrowStrip id="narrow" inputs={inputs} setInputs={setInputs} T={T} collapsible /></div>
+      {/* First screen: the question, one box, two buttons. Freshness and blind-spot details moved
+          down to sit with the list they describe — still on page, no longer above the fold. */}
+      <h2 className="mt-5 font-display text-xl font-extrabold leading-tight">{T.tagline}</h2>
+      <SearchBox id="narrow" inputs={inputs} setInputs={setInputs} T={T} onSearch={() => { announce(typedProduct ? T.sortedForYou : T.activeNow); scrollToList(); }} />
+      <StateRow inputs={inputs} setInputs={setInputs} T={T} />
 
-      <section aria-labelledby="active-h" className="mt-4">
-        <h2 id="active-h" className="font-display text-lg font-extrabold flex items-baseline gap-2">
-          {typed ? T.sortedForYou : T.activeNow}
+      <section aria-labelledby="active-h" className="mt-6">
+        <h2 id="active-h" className="font-display text-lg font-extrabold flex items-baseline gap-2 scroll-mt-4">
+          {typedProduct ? T.sortedForYou : T.activeNow}
           {loading && <span className="text-xs font-body font-normal text-slate">{T.stillChecking}</span>}
         </h2>
-        {typed && <ResultVerdict matched={matched.length} T={T} onClear={() => { setInputs({ ...EMPTY_INPUTS }); announce(T.startOver); document.getElementById('narrow')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} />}
-        {!typed && state?.archive?.available?.olderOpen > 0 && (
+        <div className="mt-1 rounded-lg border border-stockdeep px-3 pb-2"><Stamp state={state} onAbout={onAbout} T={T} /><BlindSpotBar state={state} T={T} /></div>
+        {typedProduct && <ResultVerdict matched={matched.length} T={T} onClear={() => { setInputs({ ...EMPTY_INPUTS, state: inputs.state }); announce(T.startOver); document.getElementById('narrow')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} shareLabel={T.shareSearch} />}
+        {!typedProduct && state?.archive?.available?.olderOpen > 0 && (
           <p className="mt-1 text-sm text-slate">{T.olderOpenNote(state.archive.available.olderOpen, Math.round((state.currentDays || 180) / 30))}</p>
         )}
         {!state && <p className="mt-3 text-slate">Loading…</p>}
@@ -512,15 +508,20 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
           </div>
         )}
         <ul className="mt-3 space-y-3">
-          {major.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} />)}
+          {majorShown.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} recalls={state.recalls} />)}
         </ul>
+        {major.length > PAGE && (
+          <button type="button" onClick={() => setShowAll(!showAll)} aria-expanded={showAll} className="mt-3 min-h-[52px] w-full rounded-lg border-2 border-ink text-base font-bold">
+            {showAll ? T.showFewer : T.showMore(major.length - PAGE)}
+          </button>
+        )}
         {foldActive && (
           <div className="mt-3">
             <button type="button" onClick={() => setFoldOpen(!foldOpen)} aria-expanded={foldOpen} className="min-h-[44px] w-full text-left rounded-lg border border-stockdeep px-4 py-2 text-sm flex justify-between items-center">
-              <span><span className="font-medium">{T.notMatchingFold(foldedRows.length)}</span><span className="text-slate">{T.notMatchingWhy}</span></span>
+              <span><span className="font-medium">{typedProduct ? T.notMatchingFold(foldedRows.length) : T.otherStatesFold(foldedRows.length)}</span><span className="text-slate">{T.notMatchingWhy}</span></span>
               <span aria-hidden="true">{foldOpen ? '▴' : '▾'}</span>
             </button>
-            {foldOpen && <ul className="mt-3 space-y-3">{foldedRows.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} />)}</ul>}
+            {foldOpen && <ul className="mt-3 space-y-3">{foldedRows.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} recalls={state.recalls} />)}</ul>}
           </div>
         )}
         <p className="mt-3 text-sm"><button type="button" onClick={onActive} className="text-inspection underline underline-offset-2 min-h-[44px]">{T.seeEverything}</button></p>
@@ -529,7 +530,7 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
             <button type="button" onClick={() => setShowMinor(!showMinor)} aria-expanded={showMinor} className="min-h-[44px] w-full text-left rounded-lg bg-stock px-4 py-2 font-medium flex justify-between items-center">
               <span>{T.minorFold(minor.length)}</span><span aria-hidden="true">{showMinor ? '▴' : '▾'}</span>
             </button>
-            {showMinor && <ul className="mt-3 space-y-3">{minor.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} />)}</ul>}
+            {showMinor && <ul className="mt-3 space-y-3">{minor.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} recalls={state.recalls} />)}</ul>}
           </div>
         )}
       </section>
@@ -541,7 +542,7 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
           {state.archive.lastError && <p className="mt-1 text-sm text-stamp">Couldn’t load older recalls: {state.archive.lastError.message}. Reload to try again.</p>}
           {state.archive.loadedAt && !closedRows.length && <p className="mt-1 text-sm text-slate">{T.noneOlder}</p>}
           {closedRows.length > 0 && <p className="mt-1 text-sm text-slate">{T.closedMatchSub(Math.round((state.currentDays || 180) / 30))}</p>}
-          <ul className="mt-3 space-y-3">{closedRows.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} archived />)}</ul>
+          <ul className="mt-3 space-y-3">{closedRows.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} recalls={state.recalls} archived />)}</ul>
         </section>
       )}
 
@@ -564,8 +565,9 @@ const AGENCY_NAME = { FDA: 'FDA', FSIS: 'USDA' };
  */
 let zxingPromise = null;
 function loadZxing() {
-  // Vendored, not CDN: ./vendor/zxing-browser.min.js ships with the site, loads only when someone
-  // taps Scan in a browser without the native BarcodeDetector, and defines window.ZXingBrowser.
+  // Vendored, not CDN: ./vendor/zxing-browser.min.js ships with the site, loads when someone taps
+  // Scan (immediately if the native detector is unusable, in the background otherwise), and
+  // defines window.ZXingBrowser.
   if (window.ZXingBrowser) return Promise.resolve();
   if (!zxingPromise) {
     zxingPromise = new Promise((resolve, reject) => {
@@ -608,13 +610,34 @@ function Scanner({ T, onClose, onRead }) {
       }
     };
 
+    // Decide native vs ZXing BEFORE opening the camera. Windows/Mac desktop Chrome exposes the
+    // BarcodeDetector class but has no decoding service behind it: getSupportedFormats() comes
+    // back empty (or throws), and detect() would reject forever. That probe takes milliseconds;
+    // the old approach waited for 40 rejected frames (~10 s) before handing off.
+    const FORMATS = ['upc_a', 'upc_e', 'ean_13', 'ean_8'];
+    const nativeUsable = async () => {
+      if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) return false;
+      try {
+        const supported = typeof window.BarcodeDetector.getSupportedFormats === 'function' ? await window.BarcodeDetector.getSupportedFormats() : FORMATS;
+        if (!Array.isArray(supported) || !supported.some((f) => FORMATS.includes(f))) return false;
+        // Second probe: a real detect() on a blank frame. A working service resolves []; a stub
+        // service rejects. Bounded so a hung probe can't add the delay we just removed.
+        const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+        const det = new window.BarcodeDetector({ formats: FORMATS });
+        await Promise.race([det.detect(canvas), new Promise((_, rej) => setTimeout(() => rej(new Error('probe timeout')), 1000))]);
+        return true;
+      } catch { return false; }
+    };
+
     (async () => {
-      // Path 1: the browser's built-in detector (works on Android Chrome/Edge and ChromeOS).
-      // Some desktops expose the class but every detect() rejects "service unavailable" —
-      // that must hand off to ZXing, not retry silently forever.
-      if ('BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia) {
+      const useNative = await nativeUsable();
+      if (stopped) return;
+      if (useNative) {
+        // Path 1: built-in detector (Android Chrome/Edge, ChromeOS). Start fetching the ZXing script
+        // in the background anyway — it's local and small — so a mid-scan handoff is instant.
+        loadZxing().catch(() => { /* only matters if we hand off */ });
         try {
-          const detector = new window.BarcodeDetector({ formats: ['upc_a', 'upc_e', 'ean_13', 'ean_8'] });
+          const detector = new window.BarcodeDetector({ formats: FORMATS });
           stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
           if (stopped) return;
           videoRef.current.srcObject = stream;
@@ -629,8 +652,10 @@ function Scanner({ T, onClose, onRead }) {
               const hit = codes.find((c) => /^\d{8,14}$/.test(c.rawValue));
               if (hit) { ok(hit.rawValue); return; }
             } catch (e) {
+              // Safety net for a detector that passed the probe but fails on live frames:
+              // 8 consecutive rejections (~2 s), not 40.
               failures++;
-              if (e?.name === 'NotSupportedError' || failures >= 40) { stopNative(); startZxing(); return; }
+              if (e?.name === 'NotSupportedError' || failures >= 8) { stopNative(); startZxing(); return; }
             }
             timer = setTimeout(tick, 250);
           };
@@ -668,7 +693,7 @@ function Scanner({ T, onClose, onRead }) {
   );
 }
 
-function ShareButton({ title, T }) {
+function ShareButton({ title, T, label = null }) {
   const [done, setDone] = useState(false);
   const share = async () => {
     const url = window.location.href;
@@ -678,7 +703,7 @@ function ShareButton({ title, T }) {
       setDone(true); setTimeout(() => setDone(false), 2000);
     } catch { /* user cancelled */ }
   };
-  return <button type="button" onClick={share} className="min-h-[44px] px-3 rounded-md border border-stockdeep text-sm font-medium">{done ? T.linkCopied : T.share}</button>;
+  return <button type="button" onClick={share} className="min-h-[44px] px-3 rounded-md border border-stockdeep text-sm font-medium">{done ? T.linkCopied : (label || T.share)}</button>;
 }
 
 function CodeList({ label, items, mono = true }) {
@@ -690,6 +715,43 @@ function CodeList({ label, items, mono = true }) {
         {items.map((x) => <li key={x} translate="no" className={`${mono ? 'font-mono' : ''} rounded bg-paper border border-stockdeep px-2 py-1 text-sm`}>{x}</li>)}
       </ul>
     </div>
+  );
+}
+
+/**
+ * One card per notice: brand on top, the product line as the agency wrote it, then the codes for
+ * that notice only. Merging codes across notices is what made "two brands" invisible.
+ * Long incidents (a company recalling forty SKUs) page at six, counted.
+ */
+function ProductCards({ children, T, lang }) {
+  const PAGE = 6;
+  const [all, setAll] = useState(false);
+  const shown = all ? children : children.slice(0, PAGE);
+  return (
+    <>
+      <ul className="mt-2 grid gap-3 sm:grid-cols-2">
+        {shown.map((c) => {
+          const brand = c.firm.raw || c.product.brandGuesses?.[0] || null;
+          const guess = c.product.brandGuesses?.[0];
+          const upcs = c.product.upcs.map((u) => u.digits + (u.checkDigitValid ? '' : ' *'));
+          const unverified = c.product.upcs.some((u) => !u.checkDigitValid);
+          return (
+            <li key={c.id} className="rounded-lg bg-paper border-2 border-stockdeep p-3">
+              <p className={`text-sm font-bold ${brand ? '' : 'text-slate font-normal'}`} lang="en">{brand || T.brandNotStated}</p>
+              <p className="mt-0.5 text-base font-medium" lang="en">{c.product.rawDescription || c.title}</p>
+              {guess && guess !== brand && <p className="text-xs text-slate" lang="en">{guess}</p>}
+              <CodeList label={T.barcodes} items={upcs} />
+              <CodeList label={T.lotCodes} items={c.product.lotCodes} />
+              <CodeList label={T.pkgDates} items={c.product.bestByDates.map((d) => d.raw)} />
+              {unverified && <p className="mt-1 text-xs text-slate">* {T.upcAsPrinted}</p>}
+            </li>
+          );
+        })}
+      </ul>
+      {children.length > PAGE && (
+        <button type="button" onClick={() => setAll(!all)} aria-expanded={all} className="mt-3 min-h-[48px] w-full rounded-lg border-2 border-ink text-base font-bold">{all ? T.showFewer : T.showMore(children.length - PAGE)}</button>
+      )}
+    </>
   );
 }
 
@@ -823,6 +885,8 @@ function Incident({ state, id, onBack, onOpen, onArchive, onOutbreaks, T, lang }
     if (inc || !state.archive?.available || state.archive?.loadedAt || state.archive?.loading) return;
     loadArchive(state).then(() => onArchive());
   }, [id, inc]);
+  // Hooks must run unconditionally, so this sits above the early returns.
+  useHistory(state, !!(inc && (inc.outbreakIds || []).length), onArchive);
   if (!inc && state.archive?.available && !state.archive?.loadedAt && !state.archive?.lastError) {
     return <main className="mx-auto w-full max-w-2xl px-4 py-6"><p className="text-slate">Checking closed recalls…</p></main>;
   }
@@ -842,9 +906,6 @@ function Incident({ state, id, onBack, onOpen, onArchive, onOutbreaks, T, lang }
   const s = SEVERITY[inc.severity] || SEVERITY.unclassified;
   const instr = children.find((c) => c.consumerInstruction?.extracted)?.consumerInstruction || lead.consumerInstruction;
   const disposal = lead.disposalAction;
-  const upcs = [...new Set(children.flatMap((c) => c.product.upcs.map((u) => u.digits + (u.checkDigitValid ? '' : ' (as printed in notice; may contain a typo)'))))];
-  const lots = [...new Set(children.flatMap((c) => c.product.lotCodes))];
-  const dates = [...new Set(children.flatMap((c) => c.product.bestByDates.map((d) => d.raw)))];
   const related = (inc.relatedIncidentIds || []).map((rid) => resolveIncident(state, rid)).filter(Boolean);
   const outbreaks = (inc.outbreakIds || []).map((oid) => state.outbreaks.find((o) => o.id === oid)).filter(Boolean);
   const confidenceLine = { certain: null, likely: T.groupLikely, possible: T.groupPossible }[inc.groupingConfidence];
@@ -891,33 +952,7 @@ function Incident({ state, id, onBack, onOpen, onArchive, onOutbreaks, T, lang }
         <h1 lang={!inc.titleParts && lang !== 'en' ? 'en' : undefined} className="mt-3 font-display text-2xl font-black leading-tight">{incidentTitleFor(lang, inc.titleParts, inc.title)}</h1>
         {children.length > 1 && <p className="mt-1 text-sm text-slate">{children.length} notices from {inc.agencies.map((a) => AGENCY_NAME[a]).join(' and ')}</p>}
       </article>
-
-      <section className="mt-4" aria-labelledby="food-h">
-        <h2 id="food-h" className="font-display text-lg font-extrabold">{T.theFood}</h2>
-        <ul className="mt-1 space-y-2">
-          {children.map((c) => (
-            <li key={c.id} className="text-base" lang={lang !== 'en' ? 'en' : undefined}>
-              <span className="font-medium">{c.product.rawDescription || c.title}</span>
-              {c.firm.raw && <span className="text-slate"> — {c.firm.raw}</span>}
-            </li>
-          ))}
-        </ul>
-        {inc.codeStatus === 'none' && <p className="mt-2 text-sm text-slate">{T.noBarcode}</p>}
-        {inc.codeStatus === 'has_lot_only' && <p className="mt-2 text-sm text-slate">{T.lotOnly}</p>}
-        <CodeList label={T.barcodes} items={upcs} />
-        <CodeList label={T.lotCodes} items={lots} />
-        <CodeList label={T.pkgDates} items={dates} />
-      </section>
-
-      <section className="mt-4" aria-labelledby="where-h">
-        <h2 id="where-h" className="font-display text-lg font-extrabold">{T.whereSold}</h2>
-        <p className="mt-1">{scopeLabelT(T, inc)}</p>
-        {inc.statesUnion.length > 0 && inc.scope !== 'nationwide' && <p className="mt-1 text-sm text-slate">{inc.statesUnion.map(stateName).join(', ')}</p>}
-        {inc.distributionIncomplete && <p className="mt-1 text-sm text-ochre font-medium">{T.distIncomplete}</p>}
-        {children.some((c) => c.distribution.rawPattern) && <details className="mt-1 text-sm"><summary className="text-inspection cursor-pointer min-h-[44px] flex items-center">{T.whatNoticeSays}</summary><p className="text-slate mt-1" lang={lang !== 'en' ? 'en' : undefined}>{children.map((c) => c.distribution.rawPattern).filter(Boolean).join(' / ')}</p></details>}
-      </section>
-
-      <section className="mt-4 rounded-lg bg-stock p-4" aria-labelledby="do-h">
+      <section className="mt-3 rounded-lg bg-stock border-2 border-ink p-4" aria-labelledby="do-h">
         <h2 id="do-h" className="font-display text-lg font-extrabold">{T.whatToDoHead}</h2>
         {(() => {
           // Spanish readers get USDA's own Spanish notice text when it exists — official beats any translation.
@@ -951,14 +986,34 @@ function Incident({ state, id, onBack, onOpen, onArchive, onOutbreaks, T, lang }
         <AtRisk agent={inc.agent} allergens={lead.hazard.allergens} guidance={state.hazardGuidance} T={T} lang={lang} />
       </section>
 
+
+      <section className="mt-5" aria-labelledby="food-h">
+        <h2 id="food-h" className="font-display text-lg font-extrabold">{T.isThisYours}</h2>
+        <p className="mt-0.5 text-sm text-slate">{T.isThisYoursSub}</p>
+        <ProductCards children={children} T={T} lang={lang} />
+        {inc.codeStatus === 'none' && <p className="mt-2 text-sm text-slate">{T.noBarcode}</p>}
+        {inc.codeStatus === 'has_lot_only' && <p className="mt-2 text-sm text-slate">{T.lotOnly}</p>}
+      </section>
+
+      <section className="mt-4" aria-labelledby="where-h">
+        <h2 id="where-h" className="font-display text-lg font-extrabold">{T.whereSold}</h2>
+        <p className="mt-1">{scopeLabelT(T, inc)}</p>
+        {inc.statesUnion.length > 0 && inc.scope !== 'nationwide' && <p className="mt-1 text-sm text-slate">{inc.statesUnion.map(stateName).join(', ')}</p>}
+        {inc.distributionIncomplete && <p className="mt-1 text-sm text-ochre font-medium">{T.distIncomplete}</p>}
+        {children.some((c) => c.distribution.rawPattern) && <details className="mt-1 text-sm"><summary className="text-inspection cursor-pointer min-h-[44px] flex items-center">{T.whatNoticeSays}</summary><p className="text-slate mt-1" lang={lang !== 'en' ? 'en' : undefined}>{children.map((c) => c.distribution.rawPattern).filter(Boolean).join(' / ')}</p></details>}
+      </section>
+
       {outbreaks.length > 0 && (
         <section className="mt-4" aria-labelledby="ill-h">
           <h2 id="ill-h" className="font-display text-lg font-extrabold">{T.illnessHead}</h2>
           {outbreaks.map((o) => (
-            <p key={o.id} className="mt-1 text-base">
-              {o.cases != null ? T.obSick(o.cases) : T.obSeeAdv}{o.hospitalizations ? `, ${T.obHosp(o.hospitalizations)}` : ''}{o.deaths ? `, ${T.obDied(o.deaths)}` : ''} — <span lang={lang !== 'en' ? 'en' : undefined}>{o.foodGuess || ''}</span>.
-              {o.url && <> <a className="text-inspection underline underline-offset-2" href={o.url} target="_blank" rel="noopener">{SOURCE_LABEL[o.source] || 'Investigation page'}</a></>}
-            </p>
+            <div key={o.id} className="mt-1">
+              <p className="text-base">
+                {o.cases != null ? T.obSick(o.cases) : T.obSeeAdv}{o.hospitalizations ? `, ${T.obHosp(o.hospitalizations)}` : ''}{o.deaths ? `, ${T.obDied(o.deaths)}` : ''} — <span lang={lang !== 'en' ? 'en' : undefined}>{o.foodGuess || ''}</span>.
+                {o.url && <> <a className="text-inspection underline underline-offset-2" href={o.url} target="_blank" rel="noopener">{SOURCE_LABEL[o.source] || 'Investigation page'}</a></>}
+              </p>
+              <CaseHistory state={state} outbreakId={o.id} T={T} className="mt-1" />
+            </div>
           ))}
           <p className="mt-1 text-xs text-slate">{T.illnessLinkNote} <button type="button" onClick={onOutbreaks} className="text-inspection underline underline-offset-2">{T.allInvestigations}</button></p>
         </section>
@@ -1012,7 +1067,7 @@ function AllActive({ state, inputs, onOpen, onBack, T, lang }) {
       <p className="mt-1 text-sm text-slate">{T.aaSub(rows.length, Math.round((state?.currentDays || 180) / 30))}{inputs.state || inputs.query ? ` ${T.aaFilters}` : ''}</p>
       <div className="mt-3 flex gap-2 text-sm" role="group" aria-label={T.aaSort}>{btn('severity', T.aaSortSerious)}{btn('newest', T.aaSortNewest)}</div>
       <ul className="mt-3 space-y-3">
-        {rows.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} />)}
+        {rows.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} recalls={state.recalls} />)}
       </ul>
       {state?.archive?.available?.olderOpen > 0 && <p className="mt-4 text-sm text-slate">{T.olderOpenNote(state.archive.available.olderOpen, Math.round((state.currentDays || 180) / 30))}</p>}
     </main>
@@ -1049,11 +1104,64 @@ function Review({ state, onBack }) {
   );
 }
 
+// ---------- outbreak count history ----------
+// What FDA's table said on the dates we checked (data/history.json). No axes, no interpolation:
+// each row is one observation as published. One entry means we've only ever seen one value.
+function fmtDayY(iso) {
+  if (!iso) return null;
+  const d = new Date(iso.length === 10 ? iso + 'T12:00:00Z' : iso);
+  const opts = d.getUTCFullYear() === new Date().getUTCFullYear() ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' };
+  return d.toLocaleDateString(CURRENT_TAG, opts);
+}
+function CaseHistory({ state, outbreakId, T, className = '' }) {
+  const h = state?.history;
+  if (!h?.available) return null;
+  if (h.lastError) return <p className={`text-xs text-slate ${className}`}>{T.histFailed}</p>;
+  if (!h.loadedAt) return null;
+  const obs = h.outbreaks?.[outbreakId] || [];
+  if (!obs.length) return null;
+  if (obs.length === 1) return <p className={`text-xs text-slate ${className}`}>{T.histSince(fmtDayY(obs[0].seen))}</p>;
+  // Date shown is the agency's own posted date when it moved; otherwise the day we saw the change.
+  let prevShown = null;
+  const rows = obs.map((o, k) => {
+    let day = o.agencyDate || o.seen;
+    if (day === prevShown) day = o.seen;
+    prevShown = day;
+    const before = obs[k - 1];
+    const ended = o.status === 'closed' && before && before.status !== 'closed';
+    const count = o.cases != null ? T.obSick(o.cases) : T.obSeeAdv;
+    const extra = [o.hospitalizations ? T.obHosp(o.hospitalizations) : null, o.deaths ? T.obDied(o.deaths) : null].filter(Boolean);
+    return { key: o.seen, day: fmtDayY(day), text: [count, ...extra].join(', ') + (ended ? ` · ${T.histEnded}` : '') };
+  });
+  return (
+    <div className={className}>
+      <p className="text-xs font-medium text-slate">{T.histHead}</p>
+      <ol className="mt-1 text-sm">
+        {rows.map((r) => (
+          <li key={r.key} className="flex justify-between gap-3 border-t border-stockdeep py-1">
+            <span className="text-slate shrink-0">{r.day}</span>
+            <span className="text-ink text-right">{r.text}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-1 text-xs text-slate">{T.histNote}</p>
+    </div>
+  );
+}
+/** Fetch history.json once, the first time a screen that shows outbreaks mounts. */
+function useHistory(state, wanted, onLoaded) {
+  useEffect(() => {
+    if (!wanted || !state?.history?.available || state.history.loadedAt || state.history.loading || state.history.lastError) return;
+    loadHistory(state).then(() => onLoaded());
+  }, [wanted, state?.history?.available, state?.history?.loadedAt]);
+}
+
 // ---------- outbreaks ----------
 const HIDE_COLS = /^(ref|reference|id|pathogen|product|food|total case|case count|status|investigation status)/;
 
-function Outbreaks({ state, onBack, onOpen, T, lang }) {
+function Outbreaks({ state, onBack, onOpen, onRefresh, T, lang }) {
   const core = state?.sources?.fda_core;
+  useHistory(state, true, onRefresh || (() => {}));
   // Most recent first within each section; case count breaks ties.
   const list = (state?.outbreaks || []).filter((o) => o.source === 'fda_core')
     .sort((a, b) => String(b.lastUpdated || '').localeCompare(String(a.lastUpdated || '')) || (b.cases || 0) - (a.cases || 0));
@@ -1091,6 +1199,7 @@ function Outbreaks({ state, onBack, onOpen, T, lang }) {
       <li className="rounded-lg bg-stock p-4">
         <p className="font-display text-lg font-extrabold leading-tight" lang={o.foodGuess && !/not\s+yet\s+identified/i.test(o.foodGuess) && lang !== 'en' ? 'en' : undefined}>{o.foodGuess && !/not\s+yet\s+identified/i.test(o.foodGuess) ? o.foodGuess : T.obNotYet}</p>
         <p className="mt-0.5 text-sm"><span className="font-medium">{germ}</span>{o.cases != null ? <> · {T.obSick(o.cases)}</> : <> · {T.obSeeAdv}</>}{o.hospitalizations ? <> · {T.obHosp(o.hospitalizations)}</> : null}{o.deaths ? <> · {T.obDied(o.deaths)}</> : null}</p>
+        <CaseHistory state={state} outbreakId={o.id} T={T} className="mt-2" />
         {stages.length > 0 && (
           <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-slate">
             {stages.map(([h, v]) => { const [hl, hOk] = colLabel(h); const [vl, vOk] = valLabel(v); return <div key={h} className="contents"><dt className={hOk ? '' : 'capitalize'} lang={hOk ? undefined : 'en'}>{hl}</dt><dd className="text-ink" lang={vOk ? undefined : 'en'}>{vl}</dd></div>; })}
@@ -1184,8 +1293,21 @@ function About({ state, onBack, T, lang }) {
 // app renders from a single root and re-renders on language change.
 let CURRENT_TAG = 'en-US';
 
+// On-device memory for the two things an older relative should never have to re-enter: state and
+// language. A URL param always wins (a shared link opens as the sender saw it); storage only fills
+// in when the URL is silent. Nothing leaves the phone; try/catch because private windows throw.
+const remember = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch { /* storage blocked */ } },
+};
 function App() {
-  const initial = parseRoute();
+  const initial = (() => {
+    const r = parseRoute();
+    const hashParams = new URLSearchParams((window.location.hash.split('?')[1] || ''));
+    if (!hashParams.get('state')) { const saved = normalizeStateInput(remember.get('fc-state')); if (saved) r.inputs = { ...r.inputs, state: saved }; }
+    if (!hashParams.get('lang')) { const saved = remember.get('fc-lang'); if (saved && LANGS.some((l) => l.code === saved)) r.lang = saved; }
+    return r;
+  })();
   const [state, setState] = useState(null);
   const [view, setViewRaw] = useState(initial.view);
   const [inputs, setInputsRaw] = useState(initial.inputs);
@@ -1198,6 +1320,7 @@ function App() {
   const inputsRef = useRef(inputs); inputsRef.current = inputs;
 
   useEffect(() => {
+    history.replaceState(null, '', routeFor(initial.view, initial.inputs, initial.lang));
     loadAll((s) => setState({ ...s })).catch((e) => setState((prev) => ({ ...(prev || {}), phase: 'done', fatal: String(e.message || e) })));
     const onHash = () => { const r = parseRoute(); setViewRaw(r.view); setInputsRaw(r.inputs); setLangRaw(r.lang); };
     window.addEventListener('hashchange', onHash);
@@ -1207,8 +1330,8 @@ function App() {
   // Navigation pushes a history entry (back button works); typing only rewrites the current one.
   const langRef = useRef(lang); langRef.current = lang;
   const setView = (v) => { setViewRaw(v); const h = routeFor(v, inputsRef.current, langRef.current); if (window.location.hash !== h) window.location.hash = h; };
-  const setInputs = (i) => { setInputsRaw(i); history.replaceState(null, '', routeFor(viewRef.current, i, langRef.current)); };
-  const setLang = (l) => { setLangRaw(l); history.replaceState(null, '', routeFor(viewRef.current, inputsRef.current, l)); };
+  const setInputs = (i) => { setInputsRaw(i); remember.set('fc-state', i.state ? stateName(i.state).toLowerCase() : null); history.replaceState(null, '', routeFor(viewRef.current, i, langRef.current)); };
+  const setLang = (l) => { setLangRaw(l); remember.set('fc-lang', l); history.replaceState(null, '', routeFor(viewRef.current, inputsRef.current, l)); };
   const T = makeT(lang);
 
   const open = (id) => setView({ name: 'incident', id });
@@ -1229,7 +1352,7 @@ function App() {
       {view.name === 'home' && <Home state={state} inputs={inputs} setInputs={setInputs} onOpen={open} onAbout={() => setView({ name: 'about' })} onOutbreaks={() => setView({ name: 'outbreaks' })} onActive={() => setView({ name: 'active' })} announce={announce} onArchive={onArchive} T={T} lang={lang} setLang={setLang} />}
       {view.name === 'active' && state && <AllActive state={state} inputs={inputs} onOpen={open} onBack={home} T={T} lang={lang} />}
       {view.name === 'review' && <Review state={state} onBack={home} />}
-      {view.name === 'outbreaks' && <Outbreaks state={state} onBack={home} onOpen={open} T={T} lang={lang} />}
+      {view.name === 'outbreaks' && <Outbreaks state={state} onBack={home} onOpen={open} onRefresh={onArchive} T={T} lang={lang} />}
       {view.name === 'incident' && state && <Incident state={state} id={view.id} onBack={home} onOpen={open} onArchive={onArchive} onOutbreaks={() => setView({ name: 'outbreaks' })} T={T} lang={lang} />}
       {view.name === 'about' && <About state={state} onBack={home} T={T} lang={lang} />}
     </>

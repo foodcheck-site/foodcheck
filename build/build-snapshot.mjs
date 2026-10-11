@@ -3,7 +3,8 @@
 // Owns: the full openFDA corpus (keyed, date-sliced, paginated under the 26k ceiling),
 // FSIS Recall API, FDA Recalls RSS, FDA CORE outbreak table, CDC outbreak notices,
 // reconciliation, first-seen ids, aliases, review queue, citation link check.
-// Writes data/snapshot.json. The SPA reads it in one request.
+// Writes data/snapshot.json (+ archive.json, + history.json: per-outbreak count observations,
+// appended only when a count changes and only on runs where FDA CORE actually fetched).
 //
 //   node build/build-snapshot.mjs                 # live fetch, needs OPENFDA_API_KEY for backfill
 //   node build/build-snapshot.mjs --fixture       # offline: uses test/fixtures/raw.json
@@ -22,11 +23,13 @@ import { parseRss, scrapeTable, scrapeCdcCounts, pageDate } from './scrape.js';
 import { extractConsumerInstruction, stripHtml } from '../src/data/parse.js';
 import { isCurrent, CURRENT_DAYS } from '../src/data/match.js';
 import { computeParseHealth, checkDrift } from './health.js';
+import { updateHistory, normalizeHistory, historySummary, emptyHistory } from './history.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const OUT = path.join(ROOT, 'data', 'snapshot.json');
 const ARCHIVE_OUT = path.join(ROOT, 'data', 'archive.json');
+const HISTORY_OUT = path.join(ROOT, 'data', 'history.json');
 const args = process.argv.slice(2);
 const FIXTURE = args.includes('--fixture');
 const SINCE = (() => { const i = args.indexOf('--since'); if (i >= 0) return args[i + 1]; const d = new Date(); d.setMonth(d.getMonth() - 18); return d.toISOString().slice(0, 10); })();
@@ -294,6 +297,26 @@ if (!FIXTURE) {
   if (violations.length) for (const v of violations) log(`DRIFT (forced through): ${v}`);
 }
 
+// ---------- observation history ----------
+// Append this build's outbreak counts to data/history.json — but only if FDA CORE was actually
+// fetched this run. On a CORE failure the outbreaks above are carried copies; recording them as
+// "seen now" would invent an observation. Fixture builds never write the real file.
+let history = emptyHistory();
+let historyAppended = [];
+if (!FIXTURE) {
+  if (existsSync(HISTORY_OUT)) {
+    try { history = normalizeHistory(JSON.parse(await readFile(HISTORY_OUT, 'utf8'))); }
+    catch (e) { log(`history unreadable (${e.message}); starting a fresh one`); }
+  }
+  if (sources.fda_core?.lastError == null && sources.fda_core?.fetchedAt) {
+    const r = updateHistory(history, outbreaks, NOW, parseHealth);
+    history = r.history; historyAppended = r.appended;
+    log(`history: ${historyAppended.length} outbreak observation${historyAppended.length === 1 ? '' : 's'} appended (${Object.keys(history.outbreaks).length} tracked)`);
+  } else {
+    log('history: FDA CORE was not fetched this run; leaving history.json untouched (no fabricated observations)');
+  }
+}
+
 // ---------- trim + split ----------
 // The page needs only active incidents to paint. Closed ones go to archive.json, fetched on demand
 // when someone types a barcode or product. Long raw fields are cut; the UI never shows more.
@@ -331,9 +354,11 @@ const snapshot = {
   reviewQueue,
   hazardGuidance: guidance,
   archive: { file: 'archive.json', recalls: closedRecalls.length, incidents: closedIncidents.length + olderOpenIncidents.length, olderOpen: olderOpenIncidents.length, closed: closedIncidents.length },
+  history: FIXTURE ? null : historySummary(history),
 };
 const archive = { ...common, recalls: closedRecalls, incidents: [...olderOpenIncidents, ...closedIncidents] };
 await mkdir(path.dirname(OUT), { recursive: true });
 await writeFile(OUT, JSON.stringify(snapshot));
 await writeFile(ARCHIVE_OUT, JSON.stringify(archive));
+if (!FIXTURE && history.generatedAt === NOW) await writeFile(HISTORY_OUT, JSON.stringify(history));
 log(`wrote ${OUT} (${(JSON.stringify(snapshot).length / 1024).toFixed(0)} KB, ${currentIncidents.length} current incidents) and archive.json (${(JSON.stringify(archive).length / 1024).toFixed(0)} KB, ${olderOpenIncidents.length} older-open + ${closedIncidents.length} closed)`);

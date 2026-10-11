@@ -225,6 +225,63 @@ t('drift: sharp drop flagged even above floor', () => { const prev = { fda: { n:
 t('drift: small samples never trigger', () => { const cur = { fda: { n: 12, hazardPct: 0, statesPct: 0, codesPct: 0 }, fsis: { n: 5 }, rss: { n: 0 } }; assert.equal(checkDrift(cur, null).length, 0); });
 t('drift: healthy data passes', () => { const h = { fda: { n: 2000, hazardPct: 85, statesPct: 70, codesPct: 45 }, fsis: { n: 200, hazardPct: 90, statesPct: 88, instructionPct: 85 }, rss: { n: 60, titlePct: 100 } }; assert.equal(checkDrift(h, h).length, 0); });
 
+console.log('outbreak count history');
+const { updateHistory, normalizeHistory, historySummary } = await import('../build/history.js');
+const ob = (over = {}) => ({ id: 'fda_core:1', cases: 12, hospitalizations: null, deaths: null, status: 'active', lastUpdated: '2026-01-03', ...over });
+t('history: first sight appends one observation', () => {
+  const { history, appended } = updateHistory(null, [ob()], '2026-01-03T17:00:00Z');
+  assert.deepEqual(appended, ['fda_core:1']);
+  assert.equal(history.outbreaks['fda_core:1'].length, 1);
+  assert.deepEqual(history.outbreaks['fda_core:1'][0], { seen: '2026-01-03T17:00:00Z', agencyDate: '2026-01-03', cases: 12, hospitalizations: null, deaths: null, status: 'active' });
+});
+t('history: unchanged count appends nothing (hourly runs stay flat)', () => {
+  const a = updateHistory(null, [ob()], '2026-01-03T17:00:00Z').history;
+  const { history, appended } = updateHistory(a, [ob({ lastUpdated: '2026-01-03' })], '2026-01-03T18:00:00Z');
+  assert.deepEqual(appended, []);
+  assert.equal(history.outbreaks['fda_core:1'].length, 1);
+});
+t('history: a changed count appends; a later decrease is kept as-is (revisions are real)', () => {
+  let h = updateHistory(null, [ob()], '2026-01-03T17:00:00Z').history;
+  h = updateHistory(h, [ob({ cases: 34, lastUpdated: '2026-01-19' })], '2026-01-19T17:00:00Z').history;
+  h = updateHistory(h, [ob({ cases: 31, lastUpdated: '2026-02-02' })], '2026-02-02T17:00:00Z').history;
+  assert.deepEqual(h.outbreaks['fda_core:1'].map((o) => o.cases), [12, 34, 31]);
+});
+t('history: status change alone is an observation', () => {
+  let h = updateHistory(null, [ob()], '2026-01-03T17:00:00Z').history;
+  h = updateHistory(h, [ob({ status: 'closed' })], '2026-03-01T17:00:00Z').history;
+  assert.equal(h.outbreaks['fda_core:1'].length, 2); assert.equal(h.outbreaks['fda_core:1'][1].status, 'closed');
+});
+t('history: an outbreak that leaves the page keeps its rows', () => {
+  let h = updateHistory(null, [ob(), ob({ id: 'fda_core:2', cases: 5 })], '2026-01-03T17:00:00Z').history;
+  h = updateHistory(h, [ob()], '2026-01-04T17:00:00Z').history;
+  assert.equal(h.outbreaks['fda_core:2'].length, 1);
+});
+t('history: non-numeric counts record null, never a guess', () => {
+  const h = updateHistory(null, [ob({ cases: 'See Advisory' })], '2026-01-03T17:00:00Z').history;
+  assert.equal(h.outbreaks['fda_core:1'][0].cases, null);
+});
+t('history: previous input is not mutated', () => {
+  const prev = updateHistory(null, [ob()], '2026-01-03T17:00:00Z').history;
+  const before = JSON.stringify(prev);
+  updateHistory(prev, [ob({ cases: 99 })], '2026-01-04T17:00:00Z');
+  assert.equal(JSON.stringify(prev), before);
+});
+t('history: fixture-tainted or garbage files start clean', () => {
+  assert.deepEqual(normalizeHistory({ fixture: true, outbreaks: { x: [{}] } }).outbreaks, {});
+  assert.deepEqual(normalizeHistory('nope').outbreaks, {});
+});
+t('history: parse-health recorded once per day, last write wins', () => {
+  const ph = (x) => ({ fda: { hazardPct: x, statesPct: 91, codesPct: 67 }, fsis: { hazardPct: 100, statesPct: 99, instructionPct: 99 } });
+  let h = updateHistory(null, [], '2026-01-03T10:00:00Z', ph(100)).history;
+  h = updateHistory(h, [], '2026-01-03T18:00:00Z', ph(98)).history;
+  assert.deepEqual(Object.keys(h.health), ['2026-01-03']); assert.equal(h.health['2026-01-03'].fda[0], 98);
+});
+t('history: summary reports tracked count and earliest sighting', () => {
+  let h = updateHistory(null, [ob()], '2026-01-03T17:00:00Z').history;
+  h = updateHistory(h, [ob(), ob({ id: 'fda_core:2' })], '2026-01-05T17:00:00Z').history;
+  assert.deepEqual(historySummary(h), { file: 'history.json', outbreaksTracked: 2, since: '2026-01-03T17:00:00Z' });
+});
+
 console.log('scrapers');
 const { scrapeCdcCounts, parseRss } = await import('../build/scrape.js');
 t('cdc counts: current page shape', () => {
