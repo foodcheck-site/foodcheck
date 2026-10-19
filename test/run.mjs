@@ -209,7 +209,14 @@ t('lot code: no lots listed → no lot match', () => { const inc = incs.find((i)
 t('match echoes the typed word, not the expansion', () => { const m = evaluate(cukes, byId, { query: 'pepino salada' }); assert.equal(m.matchBasis, 'product_guess'); assert.equal(m.evidence.token, 'pepino'); });
 await ta('guidance has all four languages per hazard', async () => {
   const g = JSON.parse(await (await import('node:fs/promises')).readFile(new URL('../build/hazard-guidance.json', import.meta.url), 'utf8'));
-  for (const [k, b] of Object.entries(g)) { if (k.startsWith('_')) continue; for (const l of ['en', 'es', 'ko', 'zh']) { assert.ok(b.langs[l]?.who && b.langs[l]?.lines?.length, `${k}.${l}`); assert.ok(Array.isArray(b.langs[l].checks), `${k}.${l}.checks`); } }
+  for (const [k, b] of Object.entries(g)) {
+    if (k.startsWith('_')) continue;
+    const atRisk = !!b.langs.en?.who; // summary-only entries (cyclospora, hepatitis A) have no at-risk block
+    for (const l of ['en', 'es', 'ko', 'zh', 'vi', 'tl', 'ht']) {
+      if (atRisk) { assert.ok(b.langs[l]?.who && b.langs[l]?.lines?.length, `${k}.${l}`); assert.ok(Array.isArray(b.langs[l].checks), `${k}.${l}.checks`); }
+      if (b.langs.en?.summary) { assert.ok(b.langs[l]?.summary, `${k}.${l}.summary`); assert.ok(Array.isArray(b.langs[l].summaryChecks), `${k}.${l}.summaryChecks`); }
+    }
+  }
 });
 await ta('i18n coverage: every language has every key', async () => {
   const { i18nCoverage } = await import('../src/i18n.js');
@@ -281,6 +288,47 @@ t('history: summary reports tracked count and earliest sighting', () => {
   h = updateHistory(h, [ob(), ob({ id: 'fda_core:2' })], '2026-01-05T17:00:00Z').history;
   assert.deepEqual(historySummary(h), { file: 'history.json', outbreaksTracked: 2, since: '2026-01-03T17:00:00Z' });
 });
+
+console.log('outbreaks page grouping');
+const { splitOutbreaks, filterByAgent, foodIdentified, searchQueryFor, isNew, advisoryAgency, investigationStillOpen } = await import('../src/data/outbreaks.js');
+const O = (over = {}) => ({ id: 'fda_core:' + Math.random().toString(36).slice(2, 7), source: 'fda_core', agent: 'salmonella', foodGuess: 'Sprouts', cases: 10, status: 'active', eventStatus: 'ongoing', lastUpdated: '2026-09-10', url: null, advisoryUrl: null, fields: {}, linkedIncidentIds: [], ...over });
+const NOW = new Date('2026-10-19T12:00:00Z');
+t('event status: ended outbreak with open investigation is Ended, tagged, never dropped', () => {
+  const o = O({ eventStatus: 'ended' });
+  const r = splitOutbreaks([o, O()], NOW);
+  assert.equal(r.activeN, 1); assert.equal(r.endedN, 1); assert.ok(investigationStillOpen(o));
+});
+t('event status: missing column counts as ongoing (cautious)', () => assert.equal(splitOutbreaks([O({ eventStatus: null })], NOW).activeN, 1));
+t('event status: closed investigation is Ended regardless', () => assert.equal(splitOutbreaks([O({ status: 'closed', eventStatus: 'ongoing' })], NOW).endedN, 1));
+t('toOutbreak: parses outbreak/event status and advisory url', () => {
+  const a = toOutbreak({ pathogen: 'Salmonella', product: 'Sprouts', status: 'Active', fields: { 'outbreak/\nevent\nstatus': 'Ended\nSee Advisory' }, url: 'https://www.fda.gov/food/outbreaks-foodborne-illness/outbreak-investigation-x' }, 'fda_core', '2026-10-19T00:00:00Z');
+  assert.equal(a.eventStatus, 'ended'); assert.ok(a.advisoryUrl);
+  const b = toOutbreak({ pathogen: 'Listeria', product: 'Not Yet Identified', status: 'Active', fields: { 'outbreak status': 'Ongoing See Advice' }, url: 'https://www.fda.gov/food/foodborne-pathogens/investigations-foodborne-illness-outbreaks' }, 'fda_core', '2026-10-19T00:00:00Z');
+  assert.equal(b.eventStatus, 'ongoing'); assert.equal(b.advisoryUrl, null);
+  assert.equal(toOutbreak({ pathogen: 'E. coli', product: 'Spinach', status: 'Closed', fields: {} }, 'fda_core', '2026-10-19T00:00:00Z').eventStatus, null);
+});
+t('unknown foods fold per germ with summed cases and dates', () => {
+  const r = splitOutbreaks([O({ foodGuess: 'Not Yet\nIdentified', cases: 11, lastUpdated: '2026-09-30' }), O({ foodGuess: 'Not Identified 2', cases: 44, lastUpdated: '2026-09-23' }), O({ foodGuess: 'Not Identified', cases: null })], NOW);
+  const g = r.active[0]; assert.equal(g.unknown.n, 3); assert.equal(g.unknown.cases, 55); assert.equal(g.unknown.casesKnown, 2); assert.equal(g.unknown.dates[0], '2026-09-30'); assert.equal(g.named.length, 0);
+});
+t('food identified: FDA placeholders are not foods', () => ['Not Yet Identified', 'Not\nIdentified', 'Not Identified 2', 'Unknown', ''].forEach((f) => assert.equal(foodIdentified(O({ foodGuess: f })), false, f)));
+t('ended groups by year newest first; germ chips count per tab', () => {
+  const r = splitOutbreaks([O({ status: 'closed', lastUpdated: '2025-03-01' }), O({ status: 'closed', lastUpdated: '2026-01-01', agent: 'listeria' }), O({ status: 'closed', lastUpdated: '2024-06-01' }), O()], NOW);
+  assert.deepEqual(r.ended.map((y) => y.year), ['2026', '2025', '2024']);
+  assert.deepEqual(r.agentsEnded.map((a) => a.agent + a.n), ['salmonella2', 'listeria1']); assert.deepEqual(r.agentsActive.map((a) => a.agent + a.n), ['salmonella1']);
+});
+t('germ filter keeps counts honest and drops empty years', () => {
+  const r = splitOutbreaks([O({ status: 'closed', lastUpdated: '2025-03-01' }), O({ status: 'closed', lastUpdated: '2026-01-01', agent: 'listeria' }), O()], NOW);
+  const f = filterByAgent(r, 'listeria'); assert.equal(f.activeN, 0); assert.equal(f.endedN, 1); assert.deepEqual(f.ended.map((y) => y.year), ['2026']);
+  assert.equal(filterByAgent(r, 'all'), r);
+});
+t('new tag: 30 days from posted date', () => { assert.ok(isNew(O({ lastUpdated: '2026-09-25' }), NOW)); assert.ok(!isNew(O({ lastUpdated: '2026-09-10' }), NOW)); assert.ok(!isNew(O({ lastUpdated: null }), NOW)); });
+t('search query: parentheticals and "suspect" dropped, adjectives kept, unknown → null', () => {
+  assert.equal(searchQueryFor(O({ foodGuess: 'Multi-ingredient wrap with chicken (suspect)' })), 'wrap with chicken');
+  assert.equal(searchQueryFor(O({ foodGuess: 'Raw Milk\nCheese' })), 'Raw Milk Cheese');
+  assert.equal(searchQueryFor(O({ foodGuess: 'Not Yet Identified' })), null);
+});
+t('advisory agency from host', () => { assert.equal(advisoryAgency(O({ advisoryUrl: 'https://www.fsis.usda.gov/x' })), 'USDA'); assert.equal(advisoryAgency(O({ advisoryUrl: 'https://www.fda.gov/x' })), 'FDA'); assert.equal(advisoryAgency(O()), null); });
 
 console.log('scrapers');
 const { scrapeCdcCounts, parseRss } = await import('../build/scrape.js');

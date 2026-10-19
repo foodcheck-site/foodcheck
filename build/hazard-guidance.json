@@ -15,7 +15,9 @@
      "Listeria can cause pregnancy loss, premature birth, or serious illness in newborns.",
      "Clean the fridge shelves, containers, and surfaces the product touched."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Most dangerous if you're pregnant, over 65, or have a weak immune system. Symptoms can start days or even weeks after eating.",
+    "summaryChecks": []
    },
    "es": {
     "who": "Personas embarazadas, de 65 años o más, o con el sistema inmunitario debilitado",
@@ -24,7 +26,9 @@
      "La Listeria puede causar pérdida del embarazo, parto prematuro o enfermedad grave en recién nacidos.",
      "Limpie los estantes del refrigerador, los recipientes y las superficies que tocó el producto."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Es más peligrosa durante el embarazo, después de los 65 años o con el sistema inmunitario débil. Los síntomas pueden empezar días o incluso semanas después de comer.",
+    "summaryChecks": []
    },
    "ko": {
     "who": "임신 중이거나 65세 이상이거나 면역력이 약한 분",
@@ -33,7 +37,9 @@
      "리스테리아는 유산, 조산 또는 신생아의 중증 질환을 일으킬 수 있습니다.",
      "제품이 닿았던 냉장고 선반, 용기, 표면을 세척하세요."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "임신 중이거나 65세 이상이거나 면역력이 약한 경우 가장 위험합니다. 증상은 섭취 후 며칠에서 몇 주 뒤에 시작될 수 있습니다.",
+    "summaryChecks": []
    },
    "zh": {
     "who": "孕妇、65 岁及以上或免疫力低下的人群",
@@ -42,7 +48,9 @@
      "李斯特菌可导致流产、早产或新生儿重症。",
      "请清洁产品接触过的冰箱隔板、容器和表面。"
     ],
-    "checks": []
+    "checks": [],
+    "summary": "对孕妇、65 岁以上者及免疫力低下者最为危险。症状可能在进食后数天甚至数周才出现。",
+    "summaryChecks": []
    },
    "vi": {
     "who": "Người đang mang thai, từ 65 tuổi trở lên, hoặc có hệ miễn dịch yếu",
@@ -51,7 +59,9 @@
      "Listeria có thể gây sẩy thai, sinh non hoặc bệnh nặng ở trẻ sơ sinh.",
      "Lau rửa ngăn tủ lạnh, hộp đựng và các bề mặt sản phẩm đã chạm vào."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Nguy hiểm nhất nếu bạn đang mang thai, trên 65 tuổi hoặc có hệ miễn dịch yếu. Triệu chứng có thể bắt đầu vài ngày, thậm chí vài tuần sau khi ăn.",
+    "summaryChecks": []
    },
    "tl": {
     "who": "Mga buntis, edad 65 pataas, o may mahinang immune system",
@@ -60,7 +70,9 @@
      "Maaaring magdulot ang Listeria ng pagkalaglag, maagang panganganak, o malubhang sakit sa bagong silang.",
      "Linisin ang mga istante ng ref, lalagyan, at mga surface na nadikitan ng produkto."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Pinakamapanganib kung ikaw ay buntis, mahigit 65, o may mahinang resistensya. Maaaring magsimula ang sintomas ilang araw o kahit ilang linggo pagkatapos kumain.",
+    "summaryChecks": []
    },
    "ht": {
     "who": "Moun ansent, moun ki gen 65 an oswa plis, oswa moun ki gen sistèm iminitè fèb",
@@ -69,7 +81,9 @@
      "Listeria ka lakòz foskouch, akouchman anvan lè, oswa maladi grav nan tibebe fèk fèt.",
      "Netwaye etajè frijidè a, veso yo, ak sifas pwodwi a te touche."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Li pi danjere si ou ansent, si ou gen plis pase 65 an, oswa si sistèm iminitè ou fèb. Sentòm yo ka kòmanse kèk jou oswa menm kèk semèn apre ou manje.",
+    "summaryChecks": []
    }
   }
  },
@@ -88,7 +102,9 @@
      "Don't take anti-diarrheal medicine. Contact a provider before taking antibiotics.",
      "Get care right away for bloody diarrhea, a fever over 102°F, or signs of dehydration."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Causes stomach cramps and diarrhea, often bloody, usually 3 to 4 days after eating. Some cases lead to kidney failure, most often in young children and older adults.",
+    "summaryChecks": []
    },
    "es": {
     "who": "Niños menores de 5 años, adultos de 65+ y cualquier persona con diarrea con sangre",
@@ -97,7 +113,9 @@
      "No tome medicamentos antidiarreicos. Consulte a un profesional antes de tomar antibióticos.",
      "Busque atención de inmediato si hay diarrea con sangre, fiebre de más de 39 °C (102 °F) o señales de deshidratación."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Causa cólicos y diarrea, a menudo con sangre, por lo general de 3 a 4 días después de comer. Algunos casos llevan a insuficiencia renal, sobre todo en niños pequeños y adultos mayores.",
+    "summaryChecks": []
    },
    "ko": {
     "who": "5세 미만 어린이, 65세 이상 성인, 혈변이 있는 모든 분",
@@ -106,7 +124,9 @@
      "지사제를 복용하지 마세요. 항생제 복용 전에는 의료진과 상담하세요.",
      "혈변, 39℃(102°F) 이상의 고열, 탈수 증상이 있으면 즉시 진료를 받으세요."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "보통 섭취 후 3~4일 뒤 복통과 설사(종종 혈변)를 일으킵니다. 일부는 신부전으로 이어지며, 어린이와 노인에게 가장 흔합니다.",
+    "summaryChecks": []
    },
    "zh": {
     "who": "5 岁以下儿童、65 岁及以上成人及出现血便者",
@@ -115,7 +135,9 @@
      "不要服用止泻药。服用抗生素前请先咨询医生。",
      "出现血便、超过 39°C（102°F）的发热或脱水迹象时请立即就医。"
     ],
-    "checks": []
+    "checks": [],
+    "summary": "通常在进食后 3 至 4 天引起胃绞痛和腹泻，常带血。部分病例会导致肾衰竭，多见于幼儿和老年人。",
+    "summaryChecks": []
    },
    "vi": {
     "who": "Trẻ dưới 5 tuổi, người từ 65 tuổi, và bất kỳ ai bị tiêu chảy ra máu",
@@ -124,7 +146,9 @@
      "Đừng uống thuốc cầm tiêu chảy. Hỏi ý kiến nhân viên y tế trước khi dùng kháng sinh.",
      "Đi khám ngay nếu tiêu chảy ra máu, sốt trên 39°C (102°F), hoặc có dấu hiệu mất nước."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Gây đau quặn bụng và tiêu chảy, thường có máu, khoảng 3 đến 4 ngày sau khi ăn. Một số ca dẫn đến suy thận, thường gặp nhất ở trẻ nhỏ và người lớn tuổi.",
+    "summaryChecks": []
    },
    "tl": {
     "who": "Mga batang wala pang 5 taon, matatandang 65 pataas, at sinumang may dumudugong pagtatae",
@@ -133,7 +157,9 @@
      "Huwag uminom ng gamot laban sa pagtatae. Kumonsulta muna bago uminom ng antibiotic.",
      "Magpatingin agad kung madugo ang pagtatae, may lagnat na higit 39°C (102°F), o may senyales ng dehydration."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Nagdudulot ng pananakit ng tiyan at pagtatae, madalas may dugo, kadalasan 3 hanggang 4 na araw pagkatapos kumain. May mga kasong humahantong sa pagkasira ng bato, kadalasan sa maliliit na bata at matatanda.",
+    "summaryChecks": []
    },
    "ht": {
     "who": "Timoun ki poko gen 5 an, granmoun 65 an oswa plis, ak nenpòt moun ki gen dyare ak san",
@@ -142,7 +168,9 @@
      "Pa pran medikaman kont dyare. Pale ak yon pwofesyonèl sante anvan ou pran antibyotik.",
      "Al lopital touswit si dyare a gen san, si fyèv la depase 39°C (102°F), oswa si gen siy dezidratasyon."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Li bay kranp nan vant ak dyare, souvan ak san, anjeneral 3 a 4 jou apre ou manje. Kèk ka mennen nan ren ki pa mache, pi souvan pou timoun piti ak granmoun aje.",
+    "summaryChecks": []
    }
   }
  },
@@ -161,7 +189,9 @@
      "Symptoms usually start within 12 to 36 hours but can take several days.",
      "Don't taste the product to check it, even if it looks and smells normal."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Rare but serious. In babies it can cause weak muscles, poor feeding, and a weak cry. Get medical help right away.",
+    "summaryChecks": []
    },
    "es": {
     "who": "Todas las personas que comieron o pudieron haber comido el producto",
@@ -170,7 +200,9 @@
      "Los síntomas suelen comenzar entre 12 y 36 horas después, pero pueden tardar varios días.",
      "No pruebe el producto para comprobarlo, aunque se vea y huela normal."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Raro pero grave. En los bebés puede causar debilidad muscular, dificultad para alimentarse y llanto débil. Busque atención médica de inmediato.",
+    "summaryChecks": []
    },
    "ko": {
     "who": "이 제품을 먹었거나 먹었을 가능성이 있는 모든 분",
@@ -179,7 +211,9 @@
      "증상은 보통 12~36시간 후에 시작되지만 며칠 걸릴 수도 있습니다.",
      "겉보기와 냄새가 정상이어도 확인하려고 맛보지 마세요."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "드물지만 심각합니다. 영아에게는 근육 무력, 수유 곤란, 약한 울음을 일으킬 수 있습니다. 즉시 의료 도움을 받으세요.",
+    "summaryChecks": []
    },
    "zh": {
     "who": "吃过或可能吃过此产品的所有人",
@@ -188,7 +222,9 @@
      "症状通常在 12 至 36 小时内出现，但也可能延迟数天。",
      "即使产品外观和气味正常，也不要尝试品尝来检验。"
     ],
-    "checks": []
+    "checks": [],
+    "summary": "罕见但严重。婴儿可能出现肌肉无力、喂养困难和哭声微弱。请立即就医。",
+    "summaryChecks": []
    },
    "vi": {
     "who": "Mọi người đã ăn hoặc có thể đã ăn sản phẩm",
@@ -197,7 +233,9 @@
      "Triệu chứng thường bắt đầu sau 12 đến 36 giờ, nhưng có thể muộn vài ngày.",
      "Đừng nếm thử để kiểm tra, dù sản phẩm trông và ngửi bình thường."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Hiếm nhưng nghiêm trọng. Ở trẻ sơ sinh có thể gây yếu cơ, bú kém và tiếng khóc yếu. Hãy đi khám ngay.",
+    "summaryChecks": []
    },
    "tl": {
     "who": "Lahat ng kumain o maaaring nakakain ng produkto",
@@ -206,7 +244,9 @@
      "Karaniwang nagsisimula ang sintomas sa loob ng 12 hanggang 36 na oras, pero maaaring abutin nang ilang araw.",
      "Huwag itong tikman para subukan, kahit normal ang itsura at amoy."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Bihira pero malubha. Sa mga sanggol, maaaring magdulot ng panghihina ng kalamnan, hirap sa pagpapasuso, at mahinang pag-iyak. Magpatingin agad sa doktor.",
+    "summaryChecks": []
    },
    "ht": {
     "who": "Tout moun ki te manje oswa ki ka te manje pwodwi a",
@@ -215,7 +255,9 @@
      "Sentòm yo konn kòmanse ant 12 ak 36 èdtan, men yo ka pran kèk jou.",
      "Pa goute l pou teste, menm si li sanble epi santi nòmal."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Ra men grav. Nan ti bebe li ka lakòz misk fèb, difikilte pou manje, ak yon kri fèb. Chèche èd medikal touswit.",
+    "summaryChecks": []
    }
   }
  },
@@ -233,7 +275,9 @@
      "Symptoms usually start 6 hours to 6 days after eating: diarrhea, fever, and stomach cramps.",
      "Get care for a fever over 102°F, diarrhea lasting more than 3 days, bloody stool, or signs of dehydration."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Causes diarrhea, fever, and stomach cramps, usually 6 hours to 6 days after eating. Most serious for young children, adults over 65, and people with weak immune systems.",
+    "summaryChecks": []
    },
    "es": {
     "who": "Bebés, adultos de 65+, personas embarazadas y personas con el sistema inmunitario debilitado",
@@ -241,7 +285,9 @@
      "Los síntomas suelen comenzar entre 6 horas y 6 días después de comer: diarrea, fiebre y cólicos.",
      "Busque atención si hay fiebre de más de 39 °C (102 °F), diarrea por más de 3 días, sangre en las heces o señales de deshidratación."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Causa diarrea, fiebre y cólicos, por lo general entre 6 horas y 6 días después de comer. Es más grave en niños pequeños, adultos mayores de 65 años y personas con el sistema inmunitario débil.",
+    "summaryChecks": []
    },
    "ko": {
     "who": "영유아, 65세 이상, 임신 중이거나 면역력이 약한 분",
@@ -249,7 +295,9 @@
      "증상은 보통 섭취 후 6시간~6일 사이에 시작됩니다: 설사, 발열, 복통.",
      "39℃(102°F) 이상의 발열, 3일 넘게 지속되는 설사, 혈변, 탈수 증상이 있으면 진료를 받으세요."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "보통 섭취 후 6시간에서 6일 사이에 설사, 발열, 복통을 일으킵니다. 어린이, 65세 이상, 면역력이 약한 사람에게 가장 위험합니다.",
+    "summaryChecks": []
    },
    "zh": {
     "who": "婴儿、65 岁及以上、孕妇及免疫力低下的人群",
@@ -257,7 +305,9 @@
      "症状通常在进食后 6 小时至 6 天内出现：腹泻、发热、腹痛。",
      "若发热超过 39°C（102°F）、腹泻超过 3 天、便中带血或出现脱水迹象，请就医。"
     ],
-    "checks": []
+    "checks": [],
+    "summary": "通常在进食后 6 小时至 6 天内引起腹泻、发烧和胃绞痛。对幼儿、65 岁以上成人及免疫力低下者最为严重。",
+    "summaryChecks": []
    },
    "vi": {
     "who": "Trẻ sơ sinh, người từ 65 tuổi, người mang thai và người có hệ miễn dịch yếu",
@@ -265,7 +315,9 @@
      "Triệu chứng thường bắt đầu từ 6 giờ đến 6 ngày sau khi ăn: tiêu chảy, sốt, đau bụng.",
      "Đi khám nếu sốt trên 39°C (102°F), tiêu chảy quá 3 ngày, phân có máu, hoặc có dấu hiệu mất nước."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Gây tiêu chảy, sốt và đau quặn bụng, thường từ 6 giờ đến 6 ngày sau khi ăn. Nguy hiểm nhất với trẻ nhỏ, người trên 65 tuổi và người có hệ miễn dịch yếu.",
+    "summaryChecks": []
    },
    "tl": {
     "who": "Mga sanggol, matatandang 65 pataas, mga buntis, at may mahinang immune system",
@@ -273,7 +325,9 @@
      "Karaniwang nagsisimula ang sintomas 6 na oras hanggang 6 na araw pagkatapos kumain: pagtatae, lagnat, pananakit ng tiyan.",
      "Magpatingin kung ang lagnat ay higit 39°C (102°F), pagtatae nang higit 3 araw, may dugo sa dumi, o may senyales ng dehydration."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Nagdudulot ng pagtatae, lagnat, at pananakit ng tiyan, kadalasan 6 na oras hanggang 6 na araw pagkatapos kumain. Pinakamalubha sa maliliit na bata, mga nasa 65 pataas, at mga may mahinang resistensya.",
+    "summaryChecks": []
    },
    "ht": {
     "who": "Tibebe, granmoun 65 an oswa plis, moun ansent, ak moun ki gen sistèm iminitè fèb",
@@ -281,7 +335,9 @@
      "Sentòm yo konn kòmanse ant 6 èdtan ak 6 jou apre ou fin manje: dyare, lafyèv, doulè vant.",
      "Al kay doktè si fyèv la depase 39°C (102°F), si dyare a dire plis pase 3 jou, si gen san nan poupou a, oswa si gen siy dezidratasyon."
     ],
-    "checks": []
+    "checks": [],
+    "summary": "Li bay dyare, lafyèv ak kranp nan vant, anjeneral 6 èdtan rive 6 jou apre ou manje. Li pi grav pou timoun piti, granmoun ki gen plis pase 65 an, ak moun ki gen sistèm iminitè fèb.",
+    "summaryChecks": []
    }
   }
  },
@@ -423,5 +479,82 @@
     "checks": []
    }
   }
- }
+ },
+ "cyclospora": {
+  "citation": {
+   "title": "CDC — About Cyclosporiasis",
+   "url": "https://www.cdc.gov/cyclosporiasis/",
+   "lastReachableAt": null,
+   "lastCheckStatus": null
+  },
+  "langs": {
+   "en": {
+    "summary": "A parasite that causes watery diarrhea that can last weeks, usually about a week after eating. Often linked to fresh produce.",
+    "summaryChecks": []
+   },
+   "es": {
+    "summary": "Un parásito que causa diarrea acuosa que puede durar semanas, por lo general alrededor de una semana después de comer. Suele asociarse a frutas y verduras frescas.",
+    "summaryChecks": []
+   },
+   "ko": {
+    "summary": "기생충으로, 보통 섭취 약 일주일 후 몇 주간 지속될 수 있는 물설사를 일으킵니다. 신선 농산물과 관련된 경우가 많습니다.",
+    "summaryChecks": []
+   },
+   "zh": {
+    "summary": "一种寄生虫，通常在进食约一周后引起可持续数周的水样腹泻。常与新鲜果蔬有关。",
+    "summaryChecks": []
+   },
+   "vi": {
+    "summary": "Một loại ký sinh trùng gây tiêu chảy nước có thể kéo dài nhiều tuần, thường khoảng một tuần sau khi ăn. Thường liên quan đến rau quả tươi.",
+    "summaryChecks": []
+   },
+   "tl": {
+    "summary": "Isang parasito na nagdudulot ng matubig na pagtatae na maaaring tumagal nang ilang linggo, kadalasan mga isang linggo pagkatapos kumain. Madalas na nauugnay sa sariwang prutas at gulay.",
+    "summaryChecks": []
+   },
+   "ht": {
+    "summary": "Yon parazit ki bay dyare dlo ki ka dire plizyè semèn, anjeneral anviwon yon semèn apre ou manje. Souvan li gen rapò ak fwi ak legim fre.",
+    "summaryChecks": []
+   }
+  }
+ },
+ "hepatitis_a": {
+  "citation": {
+   "title": "CDC — About Hepatitis A",
+   "url": "https://www.cdc.gov/hepatitis-a/",
+   "lastReachableAt": null,
+   "lastCheckStatus": null
+  },
+  "langs": {
+   "en": {
+    "summary": "A virus that infects the liver. Symptoms such as tiredness, dark urine, and yellow skin or eyes can start 2 to 7 weeks after eating. A vaccine within 2 weeks of exposure can prevent illness.",
+    "summaryChecks": []
+   },
+   "es": {
+    "summary": "Un virus que infecta el hígado. Síntomas como cansancio, orina oscura y piel u ojos amarillos pueden empezar de 2 a 7 semanas después de comer. Una vacuna dentro de las 2 semanas de la exposición puede prevenir la enfermedad.",
+    "summaryChecks": []
+   },
+   "ko": {
+    "summary": "간을 감염시키는 바이러스입니다. 피로, 짙은 소변, 피부나 눈의 황달 같은 증상이 섭취 후 2~7주 뒤 나타날 수 있습니다. 노출 후 2주 이내 백신 접종으로 발병을 막을 수 있습니다.",
+    "summaryChecks": []
+   },
+   "zh": {
+    "summary": "一种感染肝脏的病毒。乏力、尿色深、皮肤或眼睛发黄等症状可能在进食后 2 至 7 周出现。接触后 2 周内接种疫苗可预防发病。",
+    "summaryChecks": []
+   },
+   "vi": {
+    "summary": "Một loại vi-rút gây nhiễm trùng gan. Các triệu chứng như mệt mỏi, nước tiểu sẫm màu, vàng da hoặc vàng mắt có thể bắt đầu 2 đến 7 tuần sau khi ăn. Tiêm vắc-xin trong vòng 2 tuần sau phơi nhiễm có thể ngăn bệnh.",
+    "summaryChecks": []
+   },
+   "tl": {
+    "summary": "Isang virus na umaatake sa atay. Ang mga sintomas tulad ng pagkapagod, maitim na ihi, at paninilaw ng balat o mata ay maaaring magsimula 2 hanggang 7 linggo pagkatapos kumain. Ang bakuna sa loob ng 2 linggo mula sa pagkakalantad ay makakapigil sa sakit.",
+    "summaryChecks": []
+   },
+   "ht": {
+    "summary": "Yon viris ki enfekte fwa a. Sentòm tankou fatig, pipi fonse, ak po oswa je jòn ka kòmanse 2 a 7 semèn apre ou manje. Yon vaksen nan 2 semèn apre ekspozisyon an ka anpeche maladi a.",
+    "summaryChecks": []
+   }
+  }
+ },
+ "_note_summary": "summary: one plain sentence or two about the germ, shown on the Outbreaks page. Same rule as who/lines: unverified in every language (including English) until a person who reads it adds a summaryChecks[] entry {by, at}."
 }

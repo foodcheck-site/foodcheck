@@ -7,6 +7,7 @@
 // file and runs it as an inline module on the page, so the page's URL is the base.
 import { loadAll, loadArchive, loadHistory, freshnessLines, resolveIncident, SOURCE_LABEL } from './src/data/live.js';
 import { agentLabel } from './src/i18n.js';
+import { splitOutbreaks, filterByAgent, foodText, searchQueryFor, advisoryAgency, isNew, investigationStillOpen } from './src/data/outbreaks.js';
 import { orderIncidents, evaluate, normalizeStateInput, normalizeUpcInput, normalizeLotInput, upcInputState, scopeLabel, stateName, SEVERITY_RANK, isCurrent } from './src/data/match.js';
 import { STATES, DISPOSAL_COPY, ALLERGEN_LABEL } from './src/data/parse.js';
 import { t as makeT, LANGS, langTag, incidentTitleFor, plainSentenceFor, foodLabelFor, hazardLabelFor } from './src/i18n.js';
@@ -774,6 +775,7 @@ function resolveAtRisk(agent, allergens, guidance, lang) {
   // Old shape (a bare {who, lines, citation}) still resolves, as English.
   const langs = entry.langs || { en: { who: entry.who, lines: entry.lines, checks: entry.citation?.checks || [] } };
   const block = langs[lang] || langs.en;
+  if (!block?.who || !block?.lines) return null; // summary-only entry: no at-risk block to show
   const usedFallback = !langs[lang] && lang !== 'en';
   const sub = (t) => t.replace('{allergen}', allergen || '');
   return { who: sub(block.who), lines: block.lines.map(sub), usedFallback, citation: entry.citation || {}, checks: block.checks || [] };
@@ -1157,24 +1159,32 @@ function useHistory(state, wanted, onLoaded) {
 }
 
 // ---------- outbreaks ----------
-const HIDE_COLS = /^(ref|reference|id|pathogen|product|food|total case|case count|status|investigation status)/;
+// Oct 2026 redesign (outside UX review). Informational, not action-oriented: most outbreaks have
+// no consumer action yet. Active = still making people sick (FDA's outbreak/event status), not
+// "FDA still has a file open". Grouped by germ; unknown foods fold to one line per germ; Ended by
+// year, newest first, current year open. Stage fields and the full count history sit behind
+// Details. The CDC comparison moved to About; the CDC link stays in the footer here.
+// All grouping rules live in src/data/outbreaks.js and are tested there.
 
-function Outbreaks({ state, onBack, onOpen, onRefresh, T, lang }) {
-  const core = state?.sources?.fda_core;
-  useHistory(state, true, onRefresh || (() => {}));
-  // Most recent first within each section; case count breaks ties.
-  const list = (state?.outbreaks || []).filter((o) => o.source === 'fda_core')
-    .sort((a, b) => String(b.lastUpdated || '').localeCompare(String(a.lastUpdated || '')) || (b.cases || 0) - (a.cases || 0));
-  const active = list.filter((o) => o.status === 'active');
-  const other = list.filter((o) => o.status !== 'active');
-  const stale = core?.dataThroughDate && (Date.now() - new Date(core.dataThroughDate + 'T12:00:00Z')) / 86400000 > 14;
-  // FDA's stage-column headers and common cell values, localized when recognized; anything we
-  // don't recognize renders as published, marked lang="en".
+/** "116 people sick, up from 97 on Sep 8" — the current count plus the last recorded change, if any. */
+function countLine(o, state, T) {
+  const obs = state?.history?.outbreaks?.[o.id] || [];
+  const cur = o.cases != null ? T.obSick(o.cases) : T.obCountInAdvice;
+  if (o.cases == null || obs.length < 2) return cur;
+  const prev = [...obs].reverse().find((x) => x.cases != null && x.cases !== o.cases);
+  if (!prev) return cur;
+  const d = fmtDayY(prev.agencyDate || prev.seen);
+  return `${cur}, ${prev.cases < o.cases ? T.obUpFrom(prev.cases, d) : T.obDownFrom(prev.cases, d)}`;
+}
+
+/** Localized stage-field list (traceback, sampling…) as FDA published it; behind Details only. */
+function StageFields({ o, T }) {
   const COLS = [
     [/date\s*posted|posted/i, 'col_date'], [/total\s*case|case\s*count/i, 'col_cases'],
     [/investigation\s*status/i, 'col_invstatus'], [/advisor/i, 'col_advisory'], [/event\s*status|outbreak\s*\/?\s*event/i, 'col_eventstatus'],
     [/recall/i, 'col_recall'], [/traceback/i, 'col_traceback'], [/inspection/i, 'col_inspection'], [/sampl/i, 'col_sampling'],
   ];
+  const HIDE = /^(ref|reference|id|pathogen|product|food)/i;
   const colLabel = (h) => { const hit = COLS.find(([re]) => re.test(h)); return hit ? [T[hit[1]], true] : [h, false]; };
   const valLabel = (v) => {
     const s0 = String(v).trim();
@@ -1190,58 +1200,180 @@ function Outbreaks({ state, onBack, onOpen, onRefresh, T, lang }) {
     if (/^[✓✔]$/.test(s0) || /^\d[\d\/,-]*$/.test(s0)) return [s0, true];
     return [s0, false];
   };
-  const HIDE = /^(ref|reference|id|pathogen|product|food)/i;
-  const Row = ({ o }) => {
-    const linked = (o.linkedIncidentIds || []).map((id) => resolveIncident(state, id)).filter(Boolean);
-    const stages = Object.entries(o.fields || {}).filter(([h]) => !HIDE.test(h));
-    const germ = agentLabel(lang, o.agent) || o.pathogenLabel || o.agent;
+  const stages = Object.entries(o.fields || {}).filter(([h]) => !HIDE.test(h));
+  if (!stages.length) return null;
+  return (
+    <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-slate">
+      {stages.map(([h, v]) => { const [hl, hOk] = colLabel(h); const [vl, vOk] = valLabel(v); return <div key={h} className="contents"><dt className={hOk ? '' : 'capitalize'} lang={hOk ? undefined : 'en'}>{hl}</dt><dd className="text-ink" lang={vOk ? undefined : 'en'}>{vl}</dd></div>; })}
+    </dl>
+  );
+}
+
+function NewTag({ T, n }) {
+  return <span className="text-xs font-bold rounded-full border-2 border-ink px-2 leading-5">{n ? T.obNewN(n) : T.obNew}</span>;
+}
+
+/** One named-food entry. `compact` is the Ended row style; otherwise the Active card. */
+function OutbreakEntry({ o, state, T, lang, now, compact }) {
+  const [open, setOpen] = useState(false);
+  const agency = advisoryAgency(o);
+  const q = searchQueryFor(o);
+  const recallHref = q ? `#/?q=${encodeURIComponent(q.toLowerCase())}` : null;
+  const links = (
+    <span className="flex flex-wrap gap-x-5">
+      {o.advisoryUrl && <a className="min-h-[44px] inline-flex items-center text-inspection font-semibold underline underline-offset-2" href={o.advisoryUrl} target="_blank" rel="noopener">{T.obAdvice(agency)}</a>}
+      {recallHref && !compact && <a className="min-h-[44px] inline-flex items-center text-inspection font-semibold underline underline-offset-2" href={recallHref}>{T.obSeeRecalled}</a>}
+    </span>
+  );
+  const tags = <>{isNew(o, now) && <NewTag T={T} />}{investigationStillOpen(o) && <span className="text-xs text-slate border border-slate rounded px-1">{T.obInvOpen}</span>}</>;
+  if (compact) {
     return (
-      <li className="rounded-lg bg-stock p-4">
-        <p className="font-display text-lg font-extrabold leading-tight" lang={o.foodGuess && !/not\s+yet\s+identified/i.test(o.foodGuess) && lang !== 'en' ? 'en' : undefined}>{o.foodGuess && !/not\s+yet\s+identified/i.test(o.foodGuess) ? o.foodGuess : T.obNotYet}</p>
-        <p className="mt-0.5 text-sm"><span className="font-medium">{germ}</span>{o.cases != null ? <> · {T.obSick(o.cases)}</> : <> · {T.obSeeAdv}</>}{o.hospitalizations ? <> · {T.obHosp(o.hospitalizations)}</> : null}{o.deaths ? <> · {T.obDied(o.deaths)}</> : null}</p>
-        <CaseHistory state={state} outbreakId={o.id} T={T} className="mt-2" />
-        {stages.length > 0 && (
-          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-slate">
-            {stages.map(([h, v]) => { const [hl, hOk] = colLabel(h); const [vl, vOk] = valLabel(v); return <div key={h} className="contents"><dt className={hOk ? '' : 'capitalize'} lang={hOk ? undefined : 'en'}>{hl}</dt><dd className="text-ink" lang={vOk ? undefined : 'en'}>{vl}</dd></div>; })}
-          </dl>
-        )}
-        {linked.length > 0 && (
-          <p className="mt-2 text-sm">{T.obConnected} {linked.map((i, k) => <span key={i.id}>{k > 0 && ', '}<button type="button" onClick={() => onOpen(i.id)} className="text-inspection underline underline-offset-2 text-left min-h-[44px]">{incidentTitleFor(lang, i.titleParts, i.title)}</button></span>)}</p>
-        )}
-        <p className="mt-2 text-sm">
-          {o.url && !/investigations-foodborne-illness-outbreaks$/.test(o.url)
-            ? <a className="text-inspection underline underline-offset-2" href={o.url} target="_blank" rel="noopener">{T.obAdvisory}</a>
-            : <span className="text-slate">{T.obNoAdvisory}</span>}
-        </p>
+      <li className="flex flex-wrap items-center justify-between gap-x-3 py-1.5 border-b border-stockdeep">
+        <div className="min-w-0">
+          <p className="font-semibold flex flex-wrap items-center gap-2"><span lang="en">{foodText(o)}</span>{tags}</p>
+          <p className="text-sm text-slate">{countLine(o, state, T)} · {T.obPosted(fmtDayY(o.lastUpdated))}</p>
+        </div>
+        {links}
       </li>
     );
+  }
+  return (
+    <li className="rounded-lg bg-stock p-4">
+      <p className="font-display text-lg font-extrabold leading-tight flex flex-wrap items-center gap-2"><span lang="en">{foodText(o)}</span>{tags}</p>
+      <p className="mt-0.5 text-sm">{countLine(o, state, T)} · {T.obPosted(fmtDayY(o.lastUpdated))}</p>
+      {links}
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="min-h-[44px] text-sm text-slate underline underline-offset-2">{T.details} {open ? '▴' : '▾'}</button>
+      {open && <div className="mt-1"><CaseHistory state={state} outbreakId={o.id} T={T} /><StageFields o={o} T={T} /></div>}
+    </li>
+  );
+}
+
+/** The folded "food not identified" line for one germ; opens to the individual rows. */
+function UnknownFold({ u, named, state, T, now, compact, ended }) {
+  const [open, setOpen] = useState(false);
+  if (!u.n) return null;
+  const newN = u.items.filter((o) => isNew(o, now)).length;
+  const head = ended ? T.obUnknownEnded(u.n) : named ? T.obUnknownMore(u.n) : u.n === 1 ? T.obUnknownOne : T.obUnknownN(u.n);
+  const dates = u.dates.slice(0, 3).map(fmtDayY).join(', ');
+  const meta = [u.casesKnown ? T.obSickTotal(u.cases) : null, dates ? T.obPosted(dates) : null].filter(Boolean).join(' · ');
+  return (
+    <li className={compact ? 'py-1.5 border-b border-stockdeep' : 'rounded-lg border border-dashed border-slate px-4 py-3'}>
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="w-full text-left min-h-[44px]">
+        <span className="font-semibold flex flex-wrap items-center gap-2">{head}{newN > 0 && !ended && <NewTag T={T} n={newN} />}<span aria-hidden="true" className="ml-auto text-slate">{open ? '▴' : '▾'}</span></span>
+        <span className="block text-sm text-slate">{meta}</span>
+      </button>
+      {open && (
+        <ul className="mt-1 pl-3 border-l-2 border-stockdeep">
+          {u.items.map((o) => (
+            <li key={o.id} className="py-1.5 text-sm">
+              <p>{countLine(o, state, T)} · {T.obPosted(fmtDayY(o.lastUpdated))}{investigationStillOpen(o) ? <> · <span className="text-slate">{T.obInvOpen}</span></> : null}</p>
+              <CaseHistory state={state} outbreakId={o.id} T={T} className="mt-1" />
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+function Outbreaks({ state, onBack, onOpen, onRefresh, T, lang, initialTab = 'active' }) {
+  const core = state?.sources?.fda_core;
+  useHistory(state, true, onRefresh || (() => {}));
+  const [tab, setTab] = useState(initialTab);
+  const [germ, setGerm] = useState('all');
+  const thisYear = String(new Date().getFullYear());
+  const [openYears, setOpenYears] = useState({ [thisYear]: true });
+  const now = new Date();
+  const split = useMemo(() => splitOutbreaks(state?.outbreaks || [], now), [state?.outbreaks]);
+  const shown = filterByAgent(split, germ);
+  const stale = core?.dataThroughDate && (Date.now() - new Date(core.dataThroughDate + 'T12:00:00Z')) / 86400000 > 14;
+  const germName = (a) => agentLabel(lang, a) || a;
+  const chips = [{ agent: 'all', n: tab === 'active' ? split.activeN : split.endedN }, ...(tab === 'active' ? split.agentsActive : split.agentsEnded)];
+  const summaryFor = (agent) => {
+    const e = state?.hazardGuidance?.[agent]?.langs;
+    if (!e) return null;
+    const b = e[lang] || e.en;
+    if (!b?.summary) return null;
+    return { text: b.summary, verified: (b.summaryChecks || []).length > 0, fallback: !e[lang] && lang !== 'en' };
   };
+  const chip = 'min-h-[44px] px-3.5 rounded-full border-2 text-sm font-semibold';
   return (
     <main className="mx-auto w-full max-w-2xl px-4 pb-24">
-      <div className="pt-3"><button type="button" onClick={onBack} className="text-inspection underline underline-offset-2 min-h-[44px]">{T.back}</button></div>
-      <h1 className="mt-2 font-display text-2xl font-black">{T.obHead}</h1>
-      <p className="mt-1 text-sm text-slate">
-        {T.obIntro}
-        {core?.dataThroughDate ? <> <span className={stale ? 'text-stamp font-medium' : 'text-ink font-medium'}>{T.obDated(fmtDay(core.dataThroughDate))}</span>{stale ? T.fr_stale : ''}, {T.fr_fetched(fmtTime(core.fetchedAt))}.</> : core?.lastError ? <span className="text-stamp"> {T.obFetchFailed(core.lastError.message)}</span> : null}
-        {' '}<a className="text-inspection underline underline-offset-2" href="https://www.fda.gov/food/foodborne-pathogens/investigations-foodborne-illness-outbreaks" target="_blank" rel="noopener">{T.obLive}</a>
+      <div className="pt-3"><button type="button" onClick={onBack} className="text-inspection underline underline-offset-2 min-h-[48px] font-medium">{T.obSearchRecalls}</button></div>
+      <h1 className="mt-1 font-display text-3xl font-black leading-tight">{T.obHead}</h1>
+      <p className="mt-3 text-lg">{T.obIntro2}</p>
+      <p className="mt-2 text-sm text-slate">
+        {T.obFrom}
+        {core?.dataThroughDate ? <> · <span className={stale ? 'text-stamp font-medium' : ''}>{T.obDated(fmtDay(core.dataThroughDate))}</span>{stale ? T.fr_stale : ''}</> : null}
+        {core?.lastError ? <span className="text-stamp"> · {T.obFetchFailed(core.lastError.message)}</span> : null}
+        {' · '}<a className="text-inspection underline underline-offset-2" href="#/about">{T.obAboutList}</a>
       </p>
-      {state?.cdcCounts && (
-        <section className="mt-3 rounded-lg border border-stockdeep p-3" aria-labelledby="cmp-h">
-          <h2 id="cmp-h" className="font-display text-base font-extrabold">{T.cmpHead}</h2>
-          <p className="mt-1 text-xs text-slate">{T.cmpIntro}</p>
-          <dl className="mt-2 space-y-1 text-sm">
-            {Object.entries(state.cdcCounts.byAgent).map(([a, n]) => {
-              const fdaN = active.filter((o) => o.agent === a).length;
-              return <div key={a} className="flex flex-wrap gap-x-2"><dt className="font-medium">{agentLabel(lang, a) || a}</dt><dd className="text-slate">{T.cmpRow(n, fdaN)}</dd></div>;
-            })}
-          </dl>
-          <p className="mt-2 text-xs text-slate">{T.cmpAsOf(fmtDay(state.cdcCounts.lastUpdated))} <a className="text-inspection underline underline-offset-2" href="https://www.cdc.gov/foodborne-outbreaks/" target="_blank" rel="noopener">{T.cmpLink}</a></p>
-        </section>
+
+      <div role="group" aria-label={T.obTabsLabel} className="mt-6 grid grid-cols-2 gap-1 p-1 rounded-xl bg-stock">
+        {[['active', T.obTabActive, split.activeN], ['ended', T.obTabEnded, split.endedN]].map(([id, label, n]) => (
+          <button key={id} type="button" aria-pressed={tab === id} onClick={() => { setTab(id); setGerm('all'); }}
+            className={`min-h-[56px] rounded-lg flex items-center justify-center gap-2 ${tab === id ? 'bg-ink text-paper' : 'text-ink'}`}>
+            <span className="font-bold">{label}</span><span className="text-sm">{n}</span>
+          </button>
+        ))}
+      </div>
+      <div role="group" aria-label={T.obChipsLabel} className="mt-4 flex flex-wrap gap-2">
+        {chips.map((c) => (
+          <button key={c.agent} type="button" aria-pressed={germ === c.agent} onClick={() => setGerm(c.agent)}
+            className={`${chip} ${germ === c.agent ? 'bg-ink text-paper border-ink' : 'bg-paper border-stockdeep text-ink'}`}>{c.agent === 'all' ? T.obAll : germName(c.agent)} {c.n}</button>
+        ))}
+      </div>
+      <p className="mt-4 text-sm text-slate" aria-live="polite">{tab === 'active' ? T.obShowingActive(shown.activeN, germ === 'all' ? '' : germName(germ)) : T.obShowingEnded(shown.endedN, germ === 'all' ? '' : germName(germ))}</p>
+
+      {tab === 'active' && (
+        <>
+          {!shown.active.length && <p className="mt-4 rounded-lg bg-stock p-4">{T.obNoneActive}</p>}
+          {shown.active.map((g) => {
+            const sum = summaryFor(g.agent);
+            return (
+              <section key={g.agent} className="mt-5" aria-labelledby={`g-${g.agent}`}>
+                <h2 id={`g-${g.agent}`} className="font-display text-xl font-extrabold">{germName(g.agent)}</h2>
+                {sum && <p className="mt-0.5 text-sm" lang={sum.fallback ? 'en' : undefined}>{sum.text}{!sum.verified && <span className="text-ochre font-medium"> · {T.obSummaryUnverified}</span>}</p>}
+                <ul className="mt-2 space-y-2.5">
+                  {g.named.map((o) => <OutbreakEntry key={o.id} o={o} state={state} T={T} lang={lang} now={now} />)}
+                  <UnknownFold u={g.unknown} named={g.named.length > 0} state={state} T={T} now={now} />
+                </ul>
+              </section>
+            );
+          })}
+        </>
       )}
-      {!list.length && <p className="mt-4 rounded-lg bg-stock p-4">{T.obNone}</p>}
-      {active.length > 0 && <><h2 className="mt-4 font-display text-lg font-extrabold">{T.obActive(active.length)}</h2><ul className="mt-2 space-y-3">{active.map((o) => <Row key={o.id} o={o} />)}</ul></>}
-      {other.length > 0 && <><h2 className="mt-4 font-display text-lg font-extrabold">{T.obClosed(other.length)}</h2><ul className="mt-2 space-y-3">{other.map((o) => <Row key={o.id} o={o} />)}</ul></>}
-      <p className="mt-4 text-xs text-slate">{T.obOurs}</p>
+
+      {tab === 'ended' && (
+        <>
+          {shown.ended.map((y) => {
+            const isOpen = !!openYears[y.year];
+            return (
+              <section key={y.year} className="mt-3 border-t border-stockdeep">
+                <h2><button type="button" aria-expanded={isOpen} onClick={() => setOpenYears({ ...openYears, [y.year]: !isOpen })} className="w-full min-h-[56px] flex items-center gap-3 text-left">
+                  <span className="flex-1 font-display text-xl font-extrabold">{y.year}</span><span className="text-sm text-slate">{T.obYearN(y.n)}</span><span aria-hidden="true">{isOpen ? '▴' : '▾'}</span>
+                </button></h2>
+                {isOpen && y.groups.map((g) => (
+                  <div key={g.agent} className="mt-1 mb-3">
+                    <p className="font-semibold">{germName(g.agent)} <span className="text-slate font-normal">· {g.n}</span></p>
+                    <ul>
+                      {g.named.map((o) => <OutbreakEntry key={o.id} o={o} state={state} T={T} lang={lang} now={now} compact />)}
+                      <UnknownFold u={g.unknown} named={g.named.length > 0} state={state} T={T} now={now} compact ended />
+                    </ul>
+                  </div>
+                ))}
+              </section>
+            );
+          })}
+        </>
+      )}
+
+      <p className="mt-6 text-sm text-slate">
+        {T.obFdaBack}{' '}
+        <a className="text-inspection underline underline-offset-2" href="https://www.fda.gov/food/foodborne-pathogens/investigations-foodborne-illness-outbreaks" target="_blank" rel="noopener">{T.obFdaFull}</a>
+        {' · '}<a className="text-inspection underline underline-offset-2" href="https://www.cdc.gov/foodborne-outbreaks/" target="_blank" rel="noopener">{T.obCdcList}</a>
+      </p>
+      <p className="mt-3 text-xs text-slate">{T.obOurs}</p>
     </main>
   );
 }
@@ -1280,7 +1412,19 @@ function About({ state, onBack, T, lang }) {
         ))}
       </ul>
       {state?.archive?.available && <p className="mt-3 text-sm text-slate">{T.ab_archiveNote(state.archive.available.incidents)}</p>}
-      {state?.cdcCounts && <p className="mt-3 text-sm">{T.obCdc(Object.entries(state.cdcCounts.byAgent).map(([a, n]) => `${agentLabel(lang, a) || a} ${n}`).join(', '), fmtDay(state.cdcCounts.lastUpdated))}</p>}
+      {state?.cdcCounts && (
+        <section className="mt-4 rounded-lg border border-stockdeep p-3" aria-labelledby="cmp-h">
+          <h2 id="cmp-h" className="font-display text-base font-extrabold">{T.cmpHead}</h2>
+          <p className="mt-1 text-xs text-slate">{T.cmpIntro}</p>
+          <dl className="mt-2 space-y-1 text-sm">
+            {Object.entries(state.cdcCounts.byAgent).map(([a, n]) => {
+              const fdaN = (state.outbreaks || []).filter((o) => o.source === 'fda_core' && o.agent === a && o.status === 'active' && o.eventStatus !== 'ended').length;
+              return <div key={a} className="flex flex-wrap gap-x-2"><dt className="font-medium">{agentLabel(lang, a) || a}</dt><dd className="text-slate">{T.cmpRow(n, fdaN)}</dd></div>;
+            })}
+          </dl>
+          <p className="mt-2 text-xs text-slate">{T.cmpAsOf(fmtDay(state.cdcCounts.lastUpdated))} <a className="text-inspection underline underline-offset-2" href="https://www.cdc.gov/foodborne-outbreaks/" target="_blank" rel="noopener">{T.cmpLink}</a></p>
+        </section>
+      )}
       <p className="mt-3 text-xs text-slate">{T.ab_review}</p>
       <p className="mt-3 text-xs text-slate">{T.disclaimer}</p>
       {state?.snapshot?.fixture && <p className="mt-3 rounded bg-ochre/10 border border-ochre p-2 text-sm">{T.ab_sample}</p>}

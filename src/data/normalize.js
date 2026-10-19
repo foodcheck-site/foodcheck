@@ -262,6 +262,14 @@ export function toOutbreak(row, source, now) {
   const hospF = fieldNum(/hospital/i);
   const deathsF = fieldNum(/death/i);
   const sane = (n) => (n != null && n >= 0 && n <= 5000 ? n : null);
+  // FDA's table has two status columns. "Investigation status" says whether FDA is still working;
+  // "Outbreak/event status" says whether people are still getting sick. A consumer page wants the
+  // second. Missing column → null, and the UI treats null as still ongoing (the cautious reading).
+  const eventCell = Object.entries(row.fields || {}).find(([h]) => /outbreak\s*\/?\s*event\s*status|^outbreak\s*status/i.test(h.replace(/\s+/g, ' ')));
+  const eventStatus = !eventCell ? null : /^\s*ended/i.test(String(eventCell[1])) ? 'ended' : /^\s*ongoing|^\s*active/i.test(String(eventCell[1])) ? 'ongoing' : null;
+  // The row's own advisory page, or null when the only link is FDA's generic table.
+  const url = row.url || null;
+  const advisoryUrl = url && !/investigations-foodborne-illness-outbreaks\/?$/.test(url) ? url : null;
   return {
     id: `${source}:${(row.ref || row.id || row.title || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 60)}`,
     source,
@@ -273,7 +281,9 @@ export function toOutbreak(row, source, now) {
     hospitalizations: sane(hospF !== undefined ? hospF : row.hospitalizations ?? null),
     deaths: sane(deathsF !== undefined ? deathsF : row.deaths ?? null),
     status: /active|ongoing|investigat/i.test(row.status || 'active') ? 'active' : 'closed',
-    url: row.url || null,
+    eventStatus,
+    url,
+    advisoryUrl,
     ref: row.ref || null,
     fields: row.fields || {},
     lastUpdated: isoFromLoose(row.updated) || row.pageDate || now.slice(0, 10),
