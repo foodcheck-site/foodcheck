@@ -66,6 +66,25 @@ maintainer page stays English by design, and agency notice text renders as publi
 browser translation). The at-risk medical translations still need per-language human sign-off in
 build/hazard-guidance.json checks[] — Haitian Creole most urgently.
 
+## Visual pass (November 2026)
+From a UX designer's mockup. One typeface (Inter 400/500/600; no weight above 600, which is
+what fixed "everything is bold"). Soft off-white page (#F8FBF8), near-white cards with a shadow,
+one accent blue (#26628B); red and amber appear only on severity chips. Severity is a tinted
+one-word pill — Serious / Moderate / Minor / Not yet rated — with a shaped dot (square, diamond,
+disc, ring) so color is never the only signal; the all-caps CLASS I badge and the colored left
+edges are gone from cards (the class and plain meaning sit behind Details and on the notice
+list). All emoji replaced by inline SVG icons. The question "Is anything in my kitchen recalled?"
+is the largest text on the page; the subtext under it and under the state selector is gone (the
+placeholder and the About page carry those hints). Recalls and Outbreaks are a segmented switch
+centered in the header on both pages, with the active-outbreak count; language is a pill on the
+right. Freshness and the blind-spot bar sit behind "About this list" next to the list heading and
+open automatically when a source is failing (principle 4 holds). Footer carries the all-clear
+caveat, the update time, and the independence note. Incident page: chip, large title, What to do
+as a card with an uppercase eyebrow, "Is this yours?" product cards, then an "About this recall"
+facts list (Why, Where sold, Posted, Linked illnesses). The old Tailwind colors (paper/ink/
+inspection/stock/stockdeep) keep their names with new values; new ones: surface, faint, body,
+stamptint, ochretint, inspectiondark, inspectiontint, field, track.
+
 ## Screen layout (October 2026 UX pass)
 Home is one question and one box: "What's in your kitchen?", Search, Scan. Barcode and lot-code
 typed entry sit behind "More ways to search". The state is a single row above the list whose

@@ -57,30 +57,65 @@ function routeFor(view, inputs, lang) {
   return `#${path}${q}`;
 }
 
+// ---------- icons ----------
+// Inline SVG, stroke-only, inherits currentColor. The Nov 2026 pass removed emoji: they render
+// differently on every phone and read as decoration next to a serious notice.
+const ICON_PATHS = {
+  search: 'M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM15.5 15.5 21 21',
+  barcode: 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10.5 8v8M14 8v8M17 8v8',
+  pin: 'M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM14.5 9.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z',
+  x: 'M6 6l12 12M18 6L6 18',
+  down: 'M6 9l6 6 6-6',
+  up: 'M6 15l6-6 6 6',
+  right: 'M9 6l6 6-6 6',
+  left: 'M15 18l-6-6 6-6',
+  out: 'M7 17L17 7M8 7h9v9',
+  share: 'M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v12M7 8l5-5 5 5',
+  speaker: 'M11 5L6 9H3v6h3l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13',
+  pause: 'M8 5v14M16 5v14',
+  globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',
+  mail: 'M4 6h16v12H4zM4 7l8 6 8-6',
+  heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+  check: 'M5 12l5 5L20 7',
+  warn: 'M12 3 2 21h20L12 3zM12 10v5M12 18h.01',
+};
+function Icon({ name, size = 18, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`shrink-0 ${className}`}>
+      <path d={ICON_PATHS[name]} />
+    </svg>
+  );
+}
+const Chev = ({ open, size = 18 }) => <Icon name={open ? 'up' : 'down'} size={size} />;
+
 // ---------- severity ----------
 // Shape/edge/color are fixed; label, meaning, and the one-line explanation come from i18n.
 const SEVERITY = {
-  class_1: { edge: 'edge-1', glyph: '■', text: 'text-stamp' },
-  alert: { edge: 'edge-a', glyph: '◆', text: 'text-stamp' },
-  unclassified: { edge: 'edge-u', glyph: '□', text: 'text-slate' },
-  class_2: { edge: 'edge-2', glyph: '▲', text: 'text-ochre' },
-  class_3: { edge: 'edge-3', glyph: '●', text: 'text-slate' },
+  class_1: { edge: 'edge-1', glyph: '■', text: 'text-stamp', chip: 'bg-stamptint text-stamp', dot: 'dot-serious' },
+  alert: { edge: 'edge-a', glyph: '◆', text: 'text-stamp', chip: 'bg-stamptint text-stamp', dot: 'dot-alert' },
+  unclassified: { edge: 'edge-u', glyph: '□', text: 'text-slate', chip: 'bg-stock text-slate', dot: 'dot-unrated' },
+  class_2: { edge: 'edge-2', glyph: '▲', text: 'text-ochre', chip: 'bg-ochretint text-ochre', dot: 'dot-moderate' },
+  class_3: { edge: 'edge-3', glyph: '●', text: 'text-slate', chip: 'bg-stock text-slate', dot: 'dot-minor' },
 };
 function sevText(T, severity) {
   const arr = T[`sev_${SEVERITY[severity] ? severity : 'unclassified'}`];
   return { label: arr[0], meaning: arr[1], one: arr[2] };
 }
 
-function SeverityBadge({ severity, T, size = 'sm' }) {
-  const s = SEVERITY[severity] || SEVERITY.unclassified;
-  const x = sevText(T, severity);
+/** Tinted pill, one word, shaped dot. The old all-caps CLASS I badge made every card shout alike. */
+function SevChip({ severity, T, size = 'sm' }) {
+  const key = SEVERITY[severity] ? severity : 'unclassified';
+  const s = SEVERITY[key];
   return (
-    <span className={`inline-flex items-baseline gap-1.5 font-display uppercase tracking-wide ${s.text} ${size === 'lg' ? 'text-base' : 'text-xs'}`}>
-      <span aria-hidden="true">{s.glyph}</span>
-      <span className="font-extrabold">{x.label}</span>
-      <span className="font-body normal-case tracking-normal font-medium">· {x.meaning}</span>
+    <span className={`inline-flex items-center gap-1.5 rounded-full font-semibold ${s.chip} ${size === 'lg' ? 'px-3 py-1 text-sm' : 'px-2.5 py-0.5 text-sm'}`}>
+      <i className={`dot ${s.dot}`} aria-hidden="true" />{T[`sevShort_${key}`]}
     </span>
   );
+}
+/** Long form for Details and the notice list: chip + the agency's class + its plain meaning. */
+function SeverityBadge({ severity, T, size = 'sm' }) {
+  const x = sevText(T, severity);
+  return <span className="inline-flex items-center gap-2 flex-wrap text-sm"><SevChip severity={severity} T={T} size={size} /><span className="text-slate">{x.label} · {x.meaning}</span></span>;
 }
 
 // Result language via i18n; falls back to the English strings match.js produced.
@@ -112,20 +147,19 @@ function LangSwitch({ lang, setLang, T }) {
   return (
     <span className="relative">
       <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="menu" aria-label={T.langMenu}
-        className="min-h-[44px] px-2 flex items-center gap-1 text-sm text-inspection underline underline-offset-2">
-        <span aria-hidden="true">🌐</span> <span lang={cur.tag}>{cur.label}</span> <span aria-hidden="true">{open ? '▴' : '▾'}</span>
+        className="min-h-[44px] px-3.5 inline-flex items-center gap-1.5 rounded-full border border-stockdeep bg-surface text-sm font-medium">
+        <Icon name="globe" size={16} /><span lang={cur.tag}>{cur.label}</span><Chev open={open} size={14} />
       </button>
       {open && (
         <>
           {/* invisible backdrop: any tap outside the menu closes it */}
           <span aria-hidden="true" onClick={() => setOpen(false)} className="fixed inset-0 z-30 cursor-default" />
-          {/* On phones the header wraps and the 🌐 button sits at the LEFT, so the menu anchors
-              left there and right on wide screens; max-w keeps it on-screen either way. */}
-          <span role="menu" className="absolute left-0 sm:left-auto sm:right-0 top-full z-40 mt-1 min-w-[10rem] max-w-[calc(100vw-2rem)] rounded-md border border-stockdeep bg-paper shadow-lg py-1 flex flex-col">
+          {/* The pill sits at the right edge of the header on every width, so the menu anchors right. */}
+          <span role="menu" className="absolute right-0 top-full z-40 mt-1 min-w-[10rem] max-w-[calc(100vw-2rem)] rounded-xl border border-stockdeep bg-surface shadow-card py-1 flex flex-col">
             {LANGS.map((l) => (
               <button key={l.code} type="button" role="menuitemradio" aria-checked={lang === l.code} lang={l.tag}
                 onClick={() => { setLang(l.code); setOpen(false); }}
-                className={`min-h-[44px] px-3 text-left text-sm whitespace-nowrap ${lang === l.code ? 'bg-ink text-paper' : 'hover:bg-stock'}`}>{l.label}</button>
+                className={`min-h-[44px] px-3 text-left text-sm whitespace-nowrap ${lang === l.code ? 'bg-inspectiontint text-inspectiondark font-semibold' : 'hover:bg-stock'}`}>{l.label}</button>
             ))}
           </span>
         </>
@@ -139,7 +173,7 @@ function DonateLink({ T }) {
   // No URL configured → nothing renders.
   const url = typeof document !== 'undefined' ? document.body?.dataset?.donateUrl : null;
   if (!url || !/^https:\/\//.test(url)) return null;
-  return <a className="min-h-[44px] inline-flex items-center rounded-md border border-stockdeep px-3 text-sm font-medium" href={url} target="_blank" rel="noopener">{T.donate}</a>;
+  return <a className="min-h-[44px] inline-flex items-center gap-1.5 text-sm font-medium text-inspection" href={url} target="_blank" rel="noopener"><Icon name="heart" size={16} />{T.donate}</a>;
 }
 
 function FeedbackLink({ T, lang }) {
@@ -148,7 +182,7 @@ function FeedbackLink({ T, lang }) {
   const email = typeof document !== 'undefined' ? document.body?.dataset?.feedbackEmail : null;
   if (!email) return null;
   const href = `mailto:${email}?subject=${encodeURIComponent(T.feedbackSubject)}&body=${encodeURIComponent(`(${typeof window !== 'undefined' ? window.location.href : ''})\n\n`)}`;
-  return <a className="text-inspection underline underline-offset-2 min-h-[44px] inline-flex items-center" href={href}>✉ {T.feedback}</a>;
+  return <a className="min-h-[44px] inline-flex items-center gap-1.5 text-sm font-medium text-inspection" href={href}><Icon name="mail" size={16} />{T.feedback}</a>;
 }
 
 function BackToTop({ T }) {
@@ -166,13 +200,38 @@ function BackToTop({ T }) {
   };
   return (
     <button type="button" onClick={go}
-      className="fixed bottom-4 right-4 z-40 min-h-[48px] rounded-full bg-ink text-paper px-4 text-sm font-medium shadow-lg focus:outline-2 focus:outline-inspection">
+      className="fixed bottom-4 right-4 z-40 min-h-[48px] rounded-full bg-ink text-surface px-4 text-sm font-medium shadow-card">
       {T.backToTop}
     </button>
   );
 }
 
-// ---------- header: stamp + blind-spot bar ----------
+// ---------- header: logo, Recalls | Outbreaks switch, language ----------
+// Recalls and Outbreaks are equally important sections, so they sit side by side as a segmented
+// control (the old "Check outbreaks" button made Outbreaks look like an afterthought). On phones
+// the switch drops to its own centered row.
+function Header({ section, onHome, onOutbreaks, activeOutbreaks, lang, setLang, T }) {
+  const tab = (id, label, n, on) => (
+    <button type="button" onClick={on} aria-current={section === id ? 'page' : undefined}
+      className={`min-h-[40px] px-5 rounded-full inline-flex items-center gap-1.5 text-sm ${section === id ? 'bg-surface text-ink font-semibold shadow-card' : 'text-slate font-medium'}`}>
+      {label}{n > 0 && <span className="text-xs font-semibold text-faint">{n}</span>}
+    </button>
+  );
+  return (
+    <header className="pt-4 grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_auto_1fr] items-center gap-3">
+      <button type="button" onClick={onHome} className="justify-self-start min-h-[48px] text-xl font-semibold tracking-tight">FoodCheck</button>
+      <nav aria-label={T.navRecalls + ' / ' + T.navOutbreaks} className="order-last sm:order-none col-span-2 sm:col-span-1 justify-self-center">
+        <div className="inline-flex gap-1 p-1 rounded-full bg-track">
+          {tab('home', T.navRecalls, 0, onHome)}
+          {tab('outbreaks', T.navOutbreaks, activeOutbreaks, onOutbreaks)}
+        </div>
+      </nav>
+      <span className="justify-self-end"><LangSwitch lang={lang} setLang={setLang} T={T} /></span>
+    </header>
+  );
+}
+
+// ---------- stamp + blind-spot bar ----------
 function fmtTime(iso) { return iso ? new Date(iso).toLocaleTimeString(CURRENT_TAG, { hour: 'numeric', minute: '2-digit' }) : '—'; }
 function fmtDay(iso) { return iso ? new Date(iso.length === 10 ? iso + 'T12:00:00Z' : iso).toLocaleDateString(CURRENT_TAG, { month: 'short', day: 'numeric' }) : null; }
 
@@ -183,14 +242,14 @@ function Stamp({ state, onAbout, T }) {
   const checked = state?.live?.fetchedAt || state?.sources?.snapshot?.fetchedAt || null;
   return (
     <div className="text-sm leading-snug">
-      <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="min-h-[44px] flex items-center gap-2 text-left">
-          <span className="font-mono text-xs uppercase tracking-wider text-slate">{T.checked} {checked ? fmtTime(checked) : '…'}</span>
-          <span className={`text-xs ${failing.length ? 'text-stamp font-medium' : 'text-slate'}`}>
-            {!state ? '' : failing.length ? `· ${T.sourcesFailing(failing.length)}` : `· ${T.allSourcesOk}`} {open ? '▴' : '▾'}
-          </span>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="min-h-[44px] inline-flex items-center gap-1.5 text-left text-sm">
+          <span className="text-faint">{T.checked} {checked ? fmtTime(checked) : '…'}</span>
+          <span className={failing.length ? 'text-stamp font-medium' : 'text-faint'}>
+            {!state ? '' : failing.length ? `· ${T.sourcesFailing(failing.length)}` : `· ${T.allSourcesOk}`}
+          </span><Chev open={open} size={14} />
         </button>
-        <button type="button" onClick={onAbout} className="text-inspection underline underline-offset-2 text-sm min-h-[44px] px-1">{T.aboutData}</button>
+        <button type="button" onClick={onAbout} className="text-inspection text-sm font-medium min-h-[44px] px-1">{T.aboutData}</button>
       </div>
       {open && (
         <dl className="mt-1 space-y-0.5">
@@ -235,7 +294,13 @@ function BlindSpotBar({ state, T }) {
 // or scan it. Barcode and lot-code typed entry still exist behind "More ways to search"; the
 // state is its own one-line row above the list. Nothing was removed from the URL contract.
 const EMPTY_INPUTS = { state: null, query: '', upc: '', lot: '' };
-const FIELD = 'w-full min-h-[52px] rounded-lg border-2 border-ink bg-paper px-3 py-2 text-lg placeholder:text-slate';
+const FIELD = 'w-full min-h-[52px] rounded-2xl border border-field bg-surface px-4 py-2 text-lg placeholder:text-faint shadow-[0_1px_2px_rgba(0,0,0,.04)]';
+const BTN_PRIMARY = 'min-h-[56px] rounded-2xl bg-inspection hover:bg-inspectiondark text-surface px-7 text-lg font-semibold inline-flex items-center justify-center';
+const BTN_QUIET = 'min-h-[56px] rounded-2xl px-5 text-inspection text-base font-medium inline-flex items-center justify-center gap-2';
+const BTN_GHOST = 'min-h-[52px] w-full rounded-2xl border border-field text-base font-medium hover:bg-surface';
+const BTN_FOLD = 'min-h-[52px] w-full rounded-2xl bg-stock text-slate px-4 text-base font-medium flex items-center justify-between gap-3 text-left';
+const PILL = 'min-h-[44px] px-4 rounded-full border border-stockdeep bg-surface text-sm font-medium inline-flex items-center gap-1.5 hover:bg-stock';
+const CARD = 'rounded-2xl bg-surface shadow-card';
 
 function SearchBox({ inputs, setInputs, id, T, onSearch }) {
   const [more, setMore] = useState(!!(inputs.upc.trim() || (inputs.lot || '').trim()));
@@ -245,29 +310,30 @@ function SearchBox({ inputs, setInputs, id, T, onSearch }) {
   const upcState = upcInputState(digits);
   const upcHint = upcState === 'too_short' ? T.keepTyping : upcState === 'prefix' ? T.partialUpc : upcState === 'too_long' ? T.tooLongUpc : '';
   return (
-    <form id={id} className="mt-4" onSubmit={(e) => { e.preventDefault(); onSearch(); }} role="search" aria-label={T.whatsInKitchen}>
+    <form id={id} className="mt-7" onSubmit={(e) => { e.preventDefault(); onSearch(); }} role="search" aria-label={T.whatsInKitchen}>
       {scanning && <Scanner T={T} onClose={() => setScanning(false)} onRead={(d) => { setInputs({ ...inputs, upc: d }); setScanning(false); setMore(true); onSearch(); }} />}
-      <label className="block">
-        <span className="block font-display text-lg font-extrabold">{T.whatsInKitchen}</span>
-        <span className="block text-sm text-slate mb-2">{T.kitchenHint}</span>
-        <input className={FIELD} type="search" autoComplete="off" placeholder={T.kitchenPlaceholder} value={inputs.query} onChange={(e) => setInputs({ ...inputs, query: e.target.value })} />
-      </label>
-      <div className="mt-2 flex gap-2 flex-wrap">
-        <button type="submit" className="flex-1 min-w-[8rem] min-h-[52px] rounded-lg bg-ink text-paper px-4 text-base font-bold">{T.searchBtn}</button>
-        <button type="button" onClick={() => setScanning(true)} className="flex-1 min-w-[8rem] min-h-[52px] rounded-lg border-2 border-ink px-4 text-base font-bold">📷 {T.scan}</button>
-        {typedAny && <button type="button" onClick={() => setInputs({ ...inputs, query: '', upc: '', lot: '' })} className="min-h-[52px] px-3 rounded-lg border border-stockdeep text-sm font-medium">✕ {T.startOver}</button>}
+      {/* The question above is the label; the placeholder carries the hint. No subtext. */}
+      <label htmlFor={`${id}-q`} className="sr-only">{T.whatsInKitchen}</label>
+      <div className="relative">
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-faint pointer-events-none"><Icon name="search" size={22} /></span>
+        <input id={`${id}-q`} className={`${FIELD} min-h-[60px] pl-[52px] pr-12 text-xl`} type="search" autoComplete="off" placeholder={T.kitchenPlaceholder} value={inputs.query} onChange={(e) => setInputs({ ...inputs, query: e.target.value })} />
+        {typedAny && <button type="button" onClick={() => setInputs({ ...inputs, query: '', upc: '', lot: '' })} aria-label={T.clearSearch} className="absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-xl text-faint inline-flex items-center justify-center hover:bg-stock"><Icon name="x" /></button>}
       </div>
-      <button type="button" onClick={() => setMore(!more)} aria-expanded={more} className="mt-2 min-h-[44px] text-sm text-inspection underline underline-offset-2">{more ? T.fewerWays : T.moreWays} {more ? '▴' : '▾'}</button>
+      <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+        <button type="submit" className={BTN_PRIMARY}>{T.searchBtn}</button>
+        <button type="button" onClick={() => setScanning(true)} className={BTN_QUIET}><Icon name="barcode" size={20} />{T.scan}</button>
+      </div>
+      <button type="button" onClick={() => setMore(!more)} aria-expanded={more} className="mt-1 min-h-[44px] text-sm text-inspection font-medium inline-flex items-center gap-1">{more ? T.fewerWays : T.moreWays}<Chev open={more} size={14} /></button>
       {more && (
-        <div className="mt-1 grid gap-3 sm:grid-cols-2 rounded-lg bg-stock p-3">
+        <div className="mt-1 grid gap-3 sm:grid-cols-2 rounded-2xl bg-stock p-4">
           <label className="block">
             <span className="block text-sm font-medium mb-1">{T.barcodeLabel}</span>
-            <input className={`${FIELD} font-mono text-base min-h-[44px]`} translate="no" inputMode="numeric" pattern="[0-9 -]*" placeholder={T.barcodePlaceholder} value={inputs.upc} onChange={(e) => setInputs({ ...inputs, upc: e.target.value })} aria-describedby={`${id}-upc-hint`} />
+            <input className={`${FIELD} font-mono text-base min-h-[48px] rounded-xl`} translate="no" inputMode="numeric" pattern="[0-9 -]*" placeholder={T.barcodePlaceholder} value={inputs.upc} onChange={(e) => setInputs({ ...inputs, upc: e.target.value })} aria-describedby={`${id}-upc-hint`} />
             <span id={`${id}-upc-hint`} className="mt-1 block text-xs text-slate min-h-[1rem]">{upcHint || T.barcodeHint}</span>
           </label>
           <label className="block">
             <span className="block text-sm font-medium mb-1">{T.lotLabel}</span>
-            <input className={`${FIELD} font-mono text-base min-h-[44px]`} translate="no" placeholder={T.lotPlaceholder} value={inputs.lot || ''} onChange={(e) => setInputs({ ...inputs, lot: e.target.value })} />
+            <input className={`${FIELD} font-mono text-base min-h-[48px] rounded-xl`} translate="no" placeholder={T.lotPlaceholder} value={inputs.lot || ''} onChange={(e) => setInputs({ ...inputs, lot: e.target.value })} />
             <span className="mt-1 block text-xs text-slate">{T.lotHint}</span>
           </label>
         </div>
@@ -276,37 +342,26 @@ function SearchBox({ inputs, setInputs, id, T, onSearch }) {
   );
 }
 
-/** "Recalls that affect: [Florida ▾]" — the select is the change control, so there is no second mode. */
+/** "Your state: [Florida]". The select is the change control; the hint text is gone (the About page explains it). */
 function StateRow({ inputs, setInputs, T }) {
-  const has = !!inputs.state;
   return (
-    <div className={`mt-4 rounded-lg p-3 flex items-center gap-3 flex-wrap ${has ? 'bg-stock border-2 border-ink' : 'bg-stock'}`}>
-      <span aria-hidden="true" className="text-xl">📍</span>
-      <label className="flex-1 min-w-[12rem]">
-        <span className="block text-sm text-slate">{has ? T.recallsFor : T.chooseState}</span>
-        <select className="mt-0.5 w-full min-h-[44px] rounded-md border border-stockdeep bg-paper px-2 text-lg font-bold" value={inputs.state || ''} onChange={(e) => setInputs({ ...inputs, state: e.target.value || null })}>
-          <option value="">{T.skipState}</option>
-          {Object.entries(STATES).sort((a, b) => a[0].localeCompare(b[0])).map(([name, code]) => (
-            <option key={code} value={code}>{name.replace(/\b\w/g, (c) => c.toUpperCase())}</option>
-          ))}
-        </select>
-      </label>
-      <p className="w-full text-xs text-slate">{has ? `${T.stateHint} ${T.rememberedNote}` : T.chooseStateWhy}</p>
+    <div className={`mt-4 ${CARD} shadow-none border border-stockdeep px-4 py-3 flex items-center gap-3 flex-wrap`}>
+      <span className="text-slate"><Icon name="pin" size={20} /></span>
+      <label htmlFor="state-select" className="text-base font-medium">{T.yourState}</label>
+      <select id="state-select" className="flex-1 min-w-[11rem] min-h-[44px] rounded-xl border border-field bg-surface px-2.5 text-base font-medium" value={inputs.state || ''} onChange={(e) => setInputs({ ...inputs, state: e.target.value || null })}>
+        <option value="">{T.chooseState}</option>
+        {Object.entries(STATES).sort((a, b) => a[0].localeCompare(b[0])).map(([name, code]) => (
+          <option key={code} value={code}>{name.replace(/\b\w/g, (c) => c.toUpperCase())}</option>
+        ))}
+      </select>
     </div>
   );
 }
 
 // ---------- cards ----------
-/** Short severity chip for lists: glyph + plain meaning ("■ Serious harm possible"). Shape differs per level so color is never the only signal. */
-function SevChip({ severity, T }) {
-  const s = SEVERITY[severity] || SEVERITY.unclassified;
-  const x = sevText(T, severity);
-  return <span className={`inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide ${s.text}`}><span aria-hidden="true">{s.glyph}</span>{x.meaning}</span>;
-}
 
 function IncidentCard({ row, onOpen, T, lang, recalls, archived = false }) {
   const { incident: inc, match } = row;
-  const s = SEVERITY[inc.severity] || SEVERITY.unclassified;
   const mt = matchText(T, match);
   const closed = archived && inc.status !== 'active';
   const olderOpen = archived && inc.status === 'active';
@@ -336,32 +391,35 @@ function IncidentCard({ row, onOpen, T, lang, recalls, archived = false }) {
   const title = incidentTitleFor(lang, inc.titleParts, inc.title);
   const sevMeaning = sevText(T, inc.severity);
   const cardSpeech = [headline, plain || sevMeaning.one, hasMatch && mt.line ? mt.line : null].filter(Boolean).join('. ');
+  const reachTone = match.matchBasis === 'other_state' ? 'text-slate' : ['upc', 'upc_unverified', 'lot', 'state_and_product'].includes(match.matchBasis) ? 'text-stamp' : 'text-ochre';
   return (
-    <li className={`fade-in rounded-lg bg-stock ${s.edge}`}>
-      <button type="button" onClick={() => onOpen(inc.id)} className="block w-full text-left p-4 pl-5 pb-2 min-h-[44px] rounded-lg hover:bg-stockdeep/60">
-        <span className="flex gap-2 items-center flex-wrap text-xs text-slate">
-          <SevChip severity={inc.severity} T={T} />
-          {inc.lastUpdated && <span>· {fmtDay(inc.lastUpdated)}</span>}
-          {closed && <span className="font-mono uppercase tracking-wider border border-slate rounded px-1">{T.closedTag}</span>}
-          {olderOpen && <span className="font-mono uppercase tracking-wider border border-slate rounded px-1">{T.openTag(fmtDay(inc.lastNoticeDate || inc.firstInitiated))}</span>}
-          {sample && <span className="font-mono uppercase tracking-wider text-ochre border border-ochre rounded px-1">{T.sampleTag}</span>}
+    <li className={`fade-in ${CARD} hover:shadow-cardhover`}>
+      <button type="button" onClick={() => onOpen(inc.id)} className="w-full text-left p-5 pr-4 pb-2 min-h-[44px] rounded-2xl flex items-center gap-4">
+        <span className="flex-1 min-w-0 flex flex-col gap-1">
+          <span className="flex gap-2.5 items-center flex-wrap text-sm text-faint">
+            <SevChip severity={inc.severity} T={T} />
+            {inc.lastUpdated && <span>{fmtDay(inc.lastUpdated)}</span>}
+            {closed && <span className="rounded-full border border-stockdeep px-2 text-xs">{T.closedTag}</span>}
+            {olderOpen && <span className="rounded-full border border-stockdeep px-2 text-xs">{T.openTag(fmtDay(inc.lastNoticeDate || inc.firstInitiated))}</span>}
+            {sample && <span className="rounded-full border border-ochre text-ochre px-2 text-xs">{T.sampleTag}</span>}
+          </span>
+          <span lang={headlineEn ? 'en' : undefined} className="mt-1 block text-xl font-semibold leading-tight tracking-tight">{headline}</span>
+          {who && <span className="block text-base text-faint" lang="en">{who}</span>}
+          <span className="block text-base">{hazard} · {scopeLabelT(T, inc)}</span>
+          {hasMatch && <span className={`mt-1 inline-flex items-center gap-1.5 text-base font-semibold ${reachTone}`}><Icon name="pin" size={16} />{mt.headline}</span>}
         </span>
-        <p lang={headlineEn ? 'en' : undefined} className="mt-1 font-display text-xl font-extrabold leading-snug">{headline}</p>
-        {who && <p className="text-sm text-slate" lang="en">{who}</p>}
-        <p className="mt-1 text-base">{hazard} · {scopeLabelT(T, inc)}</p>
-        {hasMatch && <p className={`mt-1 text-base font-bold ${match.matchBasis === 'upc' ? 'text-stamp' : match.matchBasis === 'other_state' ? 'text-slate' : 'text-inspection'}`}>{mt.headline}</p>}
-        <span className="mt-2 inline-block text-inspection font-medium">{T.whatToDo}</span>
+        <span className="text-faint"><Icon name="right" size={22} /></span>
       </button>
       {/* Siblings, not nested — buttons inside the card's open-button would be invalid HTML and
           would also trigger navigation on every tap. */}
-      <div className="px-4 pl-5 pb-3 -mt-1 flex items-center gap-2 flex-wrap">
+      <div className="px-5 pb-3 flex items-center gap-3 flex-wrap text-sm">
         <SpeakButton text={cardSpeech} lang={lang} T={T} />
-        <button type="button" onClick={() => setShowDetails(!showDetails)} aria-expanded={showDetails} className="min-h-[44px] px-3 rounded-md border border-stockdeep text-sm font-medium">{T.details} {showDetails ? '▴' : '▾'}</button>
+        <button type="button" onClick={() => setShowDetails(!showDetails)} aria-expanded={showDetails} className="min-h-[44px] inline-flex items-center gap-1 text-inspection font-medium">{T.details}<Chev open={showDetails} size={14} /></button>
       </div>
       {showDetails && (
-        <div className="px-4 pl-5 pb-4 -mt-1 text-sm">
-          {plain && <p className="text-base font-medium">{plain}</p>}
-          <p className="mt-1 text-slate" lang={!inc.titleParts && lang !== 'en' ? 'en' : undefined}>{title}</p>
+        <div className="px-5 pb-5 -mt-1 text-sm border-t border-stockdeep pt-3">
+          {plain && <p className="text-base">{plain}</p>}
+          <p className="mt-1 text-faint" lang={!inc.titleParts && lang !== 'en' ? 'en' : undefined}>{title}</p>
           <p className="mt-2"><SeverityBadge severity={inc.severity} T={T} /></p>
           <p className="mt-1">{sevMeaning.one}</p>
           {hasMatch && mt.line && <p className="mt-1 text-slate">{mt.line}</p>}
@@ -391,13 +449,13 @@ function ResultVerdict({ matched, T, onClear, shareLabel }) {
   const none = matched === 0;
   const [lead, rest] = splitLead(none ? T.nothingMatched : T.matchedCount(matched));
   return (
-    <div role="status" className={`mt-2 rounded-lg border-2 p-3 ${none ? 'border-ochre bg-ochre/10' : 'border-inspection bg-inspection/10'}`}>
-      <p className="text-base"><span aria-hidden="true">{none ? '⚠️ ' : '✓ '}</span><span className="font-display font-extrabold">{lead}</span></p>
-      {rest && <p className="mt-1 text-sm">{rest}</p>}
-      <p className="mt-3 flex gap-2 flex-wrap">
-        {onClear && <button type="button" onClick={onClear} className="min-h-[44px] px-4 rounded-md bg-ink text-paper text-sm font-medium">✕ {T.startOver}</button>}
+    <div role="status" className={`mt-4 ${CARD} p-6 ${none ? 'border border-ochre' : ''}`}>
+      <p className="text-3xl font-medium leading-tight tracking-tight flex items-start gap-2">{none && <span className="text-ochre mt-1.5"><Icon name="warn" size={22} /></span>}<span>{lead}</span></p>
+      {rest && <p className="mt-2 text-base text-slate">{rest}</p>}
+      <p className="mt-4 flex gap-2 flex-wrap">
         {/* The link is the share: state, words, barcode all travel in the URL, nothing on a server. */}
         {shareLabel && <ShareButton title={shareLabel} label={shareLabel} T={T} />}
+        {onClear && <button type="button" onClick={onClear} className={PILL}><Icon name="x" size={16} />{T.startOver}</button>}
       </p>
     </div>
   );
@@ -473,72 +531,76 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
     if (state.phase === 'done' && state.fsisLive.added) announce(`${state.fsisLive.added} more from USDA.`);
   }, [state?.phase]);
 
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const anyFailing = state ? Object.values(state.sources || {}).some((x) => x?.lastError || x?.liveError) : false;
+  const checkedAt = state?.live?.fetchedAt || state?.sources?.snapshot?.fetchedAt || null;
+  const activeOutbreaks = state?.outbreaks ? state.outbreaks.filter((o) => o.source === 'fda_core' && o.status === 'active' && o.eventStatus !== 'ended').length : 0;
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 pb-24">
-      <header className="pt-4 pb-3 border-b border-stockdeep">
-        <div className="flex items-baseline justify-between flex-wrap gap-2">
-          <h1 className="font-display text-2xl font-black tracking-tight">FoodCheck</h1>
-          <span className="flex gap-3 items-center flex-wrap">
-            <LangSwitch lang={lang} setLang={setLang} T={T} />
-            <button type="button" onClick={onOutbreaks} className="min-h-[44px] rounded-md bg-inspection text-paper px-3 text-sm font-medium">{T.checkOutbreaks(state?.outbreaks?.length ? state.outbreaks.filter((o) => o.status === 'active').length : 0)}</button>
-          </span>
+    <main className="mx-auto w-full max-w-2xl px-5 pb-24">
+      <Header section="home" onHome={() => {}} onOutbreaks={onOutbreaks} activeOutbreaks={activeOutbreaks} lang={lang} setLang={setLang} T={T} />
+
+      {/* First screen: the question, as the largest thing on the page, then one box and two buttons.
+          No subtext under either — the placeholder and the About page carry the hints. */}
+      <section aria-labelledby="ask" className="pt-14 sm:pt-16">
+        <h1 id="ask" className="text-[34px] sm:text-[40px] font-medium leading-[1.15] tracking-tight [text-wrap:balance]">{T.tagline}</h1>
+        <SearchBox id="narrow" inputs={inputs} setInputs={setInputs} T={T} onSearch={() => { announce(typedProduct ? T.sortedForYou : T.activeNow); scrollToList(); }} />
+        <StateRow inputs={inputs} setInputs={setInputs} T={T} />
+      </section>
+
+      <section aria-labelledby="active-h" className="mt-14 sm:mt-16">
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <h2 id="active-h" className="text-2xl font-semibold tracking-tight scroll-mt-4">
+            {typedProduct ? T.sortedForYou : T.activeNow}
+            {loading && <span className="ml-2 text-sm font-normal text-faint">{T.stillChecking}</span>}
+          </h2>
+          <button type="button" onClick={() => setAboutOpen(!aboutOpen)} aria-expanded={aboutOpen} className={`min-h-[44px] text-sm font-medium inline-flex items-center gap-1 ${anyFailing ? 'text-stamp' : 'text-inspection'}`}>{T.obAboutList}<Chev open={aboutOpen} size={14} /></button>
         </div>
-      </header>
-
-      {/* First screen: the question, one box, two buttons. Freshness and blind-spot details moved
-          down to sit with the list they describe — still on page, no longer above the fold. */}
-      <h2 className="mt-5 font-display text-xl font-extrabold leading-tight">{T.tagline}</h2>
-      <SearchBox id="narrow" inputs={inputs} setInputs={setInputs} T={T} onSearch={() => { announce(typedProduct ? T.sortedForYou : T.activeNow); scrollToList(); }} />
-      <StateRow inputs={inputs} setInputs={setInputs} T={T} />
-
-      <section aria-labelledby="active-h" className="mt-6">
-        <h2 id="active-h" className="font-display text-lg font-extrabold flex items-baseline gap-2 scroll-mt-4">
-          {typedProduct ? T.sortedForYou : T.activeNow}
-          {loading && <span className="text-xs font-body font-normal text-slate">{T.stillChecking}</span>}
-        </h2>
-        <div className="mt-1 rounded-lg border border-stockdeep px-3 pb-2"><Stamp state={state} onAbout={onAbout} T={T} /><BlindSpotBar state={state} T={T} /></div>
+        <p className="mt-1 text-sm text-faint">{inputs.state ? T.listSubState(stateName(inputs.state)) : T.listSubAll}{checkedAt ? ` · ${T.checked} ${fmtTime(checkedAt)}` : ''}{anyFailing ? <span className="text-stamp font-medium"> · {T.sourcesFailing(1)}</span> : null}</p>
+        {/* Freshness detail and the blind-spot bar: one tap away, auto-open when a source is failing
+            (principle 4 — every omission stated on-page). */}
+        {(aboutOpen || anyFailing) && <div className={`mt-3 ${CARD} shadow-none border border-stockdeep px-4 pb-3`}><Stamp state={state} onAbout={onAbout} T={T} /><BlindSpotBar state={state} T={T} /></div>}
         {typedProduct && <ResultVerdict matched={matched.length} T={T} onClear={() => { setInputs({ ...EMPTY_INPUTS, state: inputs.state }); announce(T.startOver); document.getElementById('narrow')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} shareLabel={T.shareSearch} />}
         {!typedProduct && state?.archive?.available?.olderOpen > 0 && (
-          <p className="mt-1 text-sm text-slate">{T.olderOpenNote(state.archive.available.olderOpen, Math.round((state.currentDays || 180) / 30))}</p>
+          <p className="mt-2 text-sm text-faint">{T.olderOpenNote(state.archive.available.olderOpen, Math.round((state.currentDays || 180) / 30))}</p>
         )}
         {!state && <p className="mt-3 text-slate">Loading…</p>}
         {state && !rows.length && state.phase === 'done' && (
-          <div className="mt-3 rounded-lg bg-stock p-4">
+          <div className={`mt-4 ${CARD} p-5`}>
             <p className="font-medium">{T.noActive}</p>
             <p className="mt-1 text-sm text-slate">{T.noActiveSub}</p>
           </div>
         )}
-        <ul className="mt-3 space-y-3">
+        <ul className="mt-5 space-y-3">
           {majorShown.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} recalls={state.recalls} />)}
         </ul>
         {major.length > PAGE && (
-          <button type="button" onClick={() => setShowAll(!showAll)} aria-expanded={showAll} className="mt-3 min-h-[52px] w-full rounded-lg border-2 border-ink text-base font-bold">
+          <button type="button" onClick={() => setShowAll(!showAll)} aria-expanded={showAll} className={`mt-4 ${BTN_GHOST}`}>
             {showAll ? T.showFewer : T.showMore(major.length - PAGE)}
           </button>
         )}
         {foldActive && (
           <div className="mt-3">
-            <button type="button" onClick={() => setFoldOpen(!foldOpen)} aria-expanded={foldOpen} className="min-h-[44px] w-full text-left rounded-lg border border-stockdeep px-4 py-2 text-sm flex justify-between items-center">
-              <span><span className="font-medium">{typedProduct ? T.notMatchingFold(foldedRows.length) : T.otherStatesFold(foldedRows.length)}</span><span className="text-slate">{T.notMatchingWhy}</span></span>
-              <span aria-hidden="true">{foldOpen ? '▴' : '▾'}</span>
+            <button type="button" onClick={() => setFoldOpen(!foldOpen)} aria-expanded={foldOpen} className={BTN_FOLD}>
+              <span>{typedProduct ? T.notMatchingFold(foldedRows.length) : T.otherStatesFold(foldedRows.length)}<span className="block text-sm font-normal text-faint">{T.notMatchingWhy}</span></span>
+              <Chev open={foldOpen} />
             </button>
             {foldOpen && <ul className="mt-3 space-y-3">{foldedRows.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} recalls={state.recalls} />)}</ul>}
           </div>
         )}
-        <p className="mt-3 text-sm"><button type="button" onClick={onActive} className="text-inspection underline underline-offset-2 min-h-[44px]">{T.seeEverything}</button></p>
         {minor.length > 0 && (
           <div className="mt-3">
-            <button type="button" onClick={() => setShowMinor(!showMinor)} aria-expanded={showMinor} className="min-h-[44px] w-full text-left rounded-lg bg-stock px-4 py-2 font-medium flex justify-between items-center">
-              <span>{T.minorFold(minor.length)}</span><span aria-hidden="true">{showMinor ? '▴' : '▾'}</span>
+            <button type="button" onClick={() => setShowMinor(!showMinor)} aria-expanded={showMinor} className={BTN_FOLD}>
+              <span>{T.minorFold(minor.length)}</span><Chev open={showMinor} />
             </button>
             {showMinor && <ul className="mt-3 space-y-3">{minor.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} recalls={state.recalls} />)}</ul>}
           </div>
         )}
+        <p className="mt-3"><button type="button" onClick={onActive} className="text-inspection text-sm font-medium min-h-[44px]">{T.seeEverything}</button></p>
       </section>
 
       {wantsArchive && state?.archive?.available && (
-        <section className="mt-6" aria-labelledby="closed-h">
-          <h2 id="closed-h" className="font-display text-lg font-extrabold">{T.closedMatchHead}</h2>
+        <section className="mt-14" aria-labelledby="closed-h">
+          <h2 id="closed-h" className="text-xl font-semibold tracking-tight">{T.closedMatchHead}</h2>
           {state.archive.loading && <p className="mt-1 text-sm text-slate">{T.checkingOlder}</p>}
           {state.archive.lastError && <p className="mt-1 text-sm text-stamp">Couldn’t load older recalls: {state.archive.lastError.message}. Reload to try again.</p>}
           {state.archive.loadedAt && !closedRows.length && <p className="mt-1 text-sm text-slate">{T.noneOlder}</p>}
@@ -547,9 +609,11 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
         </section>
       )}
 
-      <p className="mt-6 text-sm text-slate">{T.bottomNote}</p>
-      <p className="mt-2 text-xs text-slate">{T.disclaimer}</p>
-      <p className="mt-3 flex gap-3 items-center flex-wrap"><FeedbackLink T={T} lang={lang} /><DonateLink T={T} /></p>
+      <footer className="mt-16 pt-6 border-t border-stockdeep flex flex-col gap-3">
+        <p className="text-base text-slate">{T.bottomNote}</p>
+        <p className="text-sm text-faint">{checkedAt ? `${T.updatedFrom(fmtTime(checkedAt))} ` : ''}{T.disclaimer}</p>
+        <p className="flex gap-6 items-center flex-wrap"><FeedbackLink T={T} lang={lang} /><DonateLink T={T} /></p>
+      </footer>
       <BackToTop T={T} />
     </main>
   );
@@ -679,16 +743,16 @@ function Scanner({ T, onClose, onRead }) {
   }, []);
   return (
     <div role="dialog" aria-modal="true" aria-label={T.scanTitle} className="fixed inset-0 z-50 bg-ink/90 flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-lg bg-paper p-4">
-        <p className="font-display font-extrabold text-lg">{T.scanTitle}</p>
+      <div className={`w-full max-w-md ${CARD} p-5`}>
+        <p className="text-lg font-semibold">{T.scanTitle}</p>
         {!err && <>
-          <video ref={videoRef} playsInline muted className="mt-3 w-full rounded-md bg-ink aspect-video object-cover" />
+          <video ref={videoRef} playsInline muted className="mt-3 w-full rounded-xl bg-ink aspect-video object-cover" />
           <p className="mt-2 text-sm text-slate">{loading ? T.scanLoading : T.scanHint}</p>
         </>}
         {err === 'unsupported' && <p className="mt-3 text-sm">{T.scanUnsupported}</p>}
         {err === 'denied' && <p className="mt-3 text-sm">{T.scanDenied}</p>}
         <p className="mt-2 text-xs text-slate">{T.scanLotNote}</p>
-        <button type="button" onClick={onClose} className="mt-3 min-h-[44px] w-full rounded-md bg-ink text-paper font-medium">{T.scanClose}</button>
+        <button type="button" onClick={onClose} className={`mt-3 w-full ${BTN_PRIMARY}`}>{T.scanClose}</button>
       </div>
     </div>
   );
@@ -704,16 +768,16 @@ function ShareButton({ title, T, label = null }) {
       setDone(true); setTimeout(() => setDone(false), 2000);
     } catch { /* user cancelled */ }
   };
-  return <button type="button" onClick={share} className="min-h-[44px] px-3 rounded-md border border-stockdeep text-sm font-medium">{done ? T.linkCopied : (label || T.share)}</button>;
+  return <button type="button" onClick={share} className={PILL}><Icon name={done ? 'check' : 'share'} size={16} />{done ? T.linkCopied : (label || T.share)}</button>;
 }
 
 function CodeList({ label, items, mono = true }) {
   if (!items?.length) return null;
   return (
-    <div className="mt-2">
-      <span className="text-sm font-medium">{label}</span>
-      <ul className="mt-1 flex flex-wrap gap-2">
-        {items.map((x) => <li key={x} translate="no" className={`${mono ? 'font-mono' : ''} rounded bg-paper border border-stockdeep px-2 py-1 text-sm`}>{x}</li>)}
+    <div className="mt-3">
+      <span className="block text-sm text-faint">{label}</span>
+      <ul className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1">
+        {items.map((x) => <li key={x} translate="no" className={`${mono ? 'font-mono' : ''} text-base font-medium tabular-nums`}>{x}</li>)}
       </ul>
     </div>
   );
@@ -737,10 +801,10 @@ function ProductCards({ children, T, lang }) {
           const upcs = c.product.upcs.map((u) => u.digits + (u.checkDigitValid ? '' : ' *'));
           const unverified = c.product.upcs.some((u) => !u.checkDigitValid);
           return (
-            <li key={c.id} className="rounded-lg bg-paper border-2 border-stockdeep p-3">
-              <p className={`text-sm font-bold ${brand ? '' : 'text-slate font-normal'}`} lang="en">{brand || T.brandNotStated}</p>
-              <p className="mt-0.5 text-base font-medium" lang="en">{c.product.rawDescription || c.title}</p>
-              {guess && guess !== brand && <p className="text-xs text-slate" lang="en">{guess}</p>}
+            <li key={c.id} className={`${CARD} shadow-none border border-stockdeep p-5`}>
+              <p className={`text-sm font-semibold ${brand ? 'text-faint' : 'text-faint font-normal'}`} lang="en">{brand || T.brandNotStated}</p>
+              <p className="mt-0.5 text-lg font-semibold leading-snug" lang="en">{c.product.rawDescription || c.title}</p>
+              {guess && guess !== brand && <p className="text-sm text-faint" lang="en">{guess}</p>}
               <CodeList label={T.barcodes} items={upcs} />
               <CodeList label={T.lotCodes} items={c.product.lotCodes} />
               <CodeList label={T.pkgDates} items={c.product.bestByDates.map((d) => d.raw)} />
@@ -750,7 +814,7 @@ function ProductCards({ children, T, lang }) {
         })}
       </ul>
       {children.length > PAGE && (
-        <button type="button" onClick={() => setAll(!all)} aria-expanded={all} className="mt-3 min-h-[48px] w-full rounded-lg border-2 border-ink text-base font-bold">{all ? T.showFewer : T.showMore(children.length - PAGE)}</button>
+        <button type="button" onClick={() => setAll(!all)} aria-expanded={all} className={`mt-3 ${BTN_GHOST}`}>{all ? T.showFewer : T.showMore(children.length - PAGE)}</button>
       )}
     </>
   );
@@ -793,14 +857,14 @@ function AtRisk({ agent, allergens, guidance, T, lang }) {
   const dead = c.url && c.lastReachableAt === null && c.lastCheckStatus && c.lastCheckStatus !== 403 && c.lastCheckStatus !== 429;
 
   return (
-    <div className="mt-4 rounded-lg border-2 border-ink p-3" lang={usedFallback ? 'en' : undefined}>
-      <p className="font-display font-extrabold">{who}</p>
+    <div className="mt-5 pt-4 border-t border-stockdeep" lang={usedFallback ? 'en' : undefined}>
+      <p className="text-base font-semibold">{who}</p>
       <ul className="mt-1 space-y-1 text-base">
         {lines.map((l, i) => <li key={i}>{l}</li>)}
       </ul>
       {lang !== 'en' && !usedFallback && !checks.length && T.translationUnverified && <p className="mt-2 text-xs text-ochre font-medium">{T.translationUnverified}</p>}
       <p className="mt-2 text-xs text-slate">
-        {c.url ? <a className="text-inspection underline underline-offset-2" href={c.url} target="_blank" rel="noopener" lang="en">{c.title}</a> : <span lang="en">{c.title}</span>}
+        {c.url ? <a className="text-inspection font-medium" href={c.url} target="_blank" rel="noopener" lang="en">{c.title}</a> : <span lang="en">{c.title}</span>}
         {' · '}<span className={checks.length ? '' : 'text-ochre font-medium'}>{checkedLine}</span>
         {dead ? <span className="text-stamp font-medium"> · {T.linkMoved}</span> : null}
       </p>
@@ -871,8 +935,8 @@ function SpeakButton({ text, lang, T, size = 'sm' }) {
   return (
     <span className="inline-flex items-center gap-2 flex-wrap">
       <button type="button" onClick={toggle} aria-pressed={speaking}
-        className={`min-h-[44px] ${size === 'lg' ? 'px-4' : 'px-3'} rounded-md border font-medium text-sm inline-flex items-center gap-1.5 ${speaking ? 'bg-ink text-paper border-ink' : 'border-stockdeep'}`}>
-        <span aria-hidden="true">{speaking ? '⏸' : '🔊'}</span> {speaking ? T.stopListening : T.listen}
+        className={size === 'lg' ? `${PILL} ${speaking ? 'bg-inspectiontint text-inspectiondark border-inspectiontint' : ''}` : `min-h-[44px] inline-flex items-center gap-1.5 text-sm font-medium ${speaking ? 'text-inspectiondark' : 'text-inspection'}`}>
+        <Icon name={speaking ? 'pause' : 'speaker'} size={16} />{speaking ? T.stopListening : T.listen}
       </button>
       {noVoice && <span role="status" className="text-xs text-ochre">{T.noVoice(langName)}</span>}
     </span>
@@ -895,10 +959,10 @@ function Incident({ state, id, onBack, onOpen, onArchive, onOutbreaks, T, lang }
   if (!inc) {
     return (
       <main className="mx-auto w-full max-w-2xl px-4 py-6">
-        <button type="button" onClick={onBack} className="text-inspection underline underline-offset-2 min-h-[44px]">← Back</button>
-        <h1 className="mt-4 font-display text-2xl font-black">{T.notFoundHead}</h1>
+        <button type="button" onClick={onBack} className="min-h-[48px] inline-flex items-center gap-1 text-base font-medium text-inspection"><Icon name="left" />{T.back}</button>
+        <h1 className="mt-4 text-3xl font-medium tracking-tight">{T.notFoundHead}</h1>
         <p className="mt-2">{T.notFoundBody}</p>
-        <button type="button" onClick={onBack} className="mt-4 min-h-[44px] rounded-md bg-inspection text-paper px-4 font-medium">{T.seeAllActive}</button>
+        <button type="button" onClick={onBack} className={`mt-4 ${BTN_PRIMARY}`}>{T.seeAllActive}</button>
       </main>
     );
   }
@@ -935,10 +999,11 @@ function Incident({ state, id, onBack, onOpen, onArchive, onOutbreaks, T, lang }
     ].filter(Boolean).join('. ');
   })();
 
+  const posted = inc.lastNoticeDate || inc.firstInitiated;
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 pb-24">
-      <div className="pt-3 flex items-center justify-between gap-2 flex-wrap">
-        <button type="button" onClick={onBack} className="text-inspection underline underline-offset-2 min-h-[44px]">{T.backToList}</button>
+    <main className="mx-auto w-full max-w-2xl px-5 pb-24">
+      <div className="pt-5 flex items-center justify-between gap-2 flex-wrap">
+        <button type="button" onClick={onBack} className="min-h-[48px] inline-flex items-center gap-1 text-base font-medium text-inspection"><Icon name="left" />{T.backToList}</button>
         <span className="flex gap-2">
           <SpeakButton text={speechText} lang={lang} T={T} size="lg" />
           <ShareButton title={inc.title} T={T} />
@@ -946,84 +1011,102 @@ function Incident({ state, id, onBack, onOpen, onArchive, onOutbreaks, T, lang }
       </div>
 
       {children.every((c) => c.fromFixture) && <p className="mt-2 text-sm text-ochre font-medium">{T.incSample}</p>}
-      {closed && <p className="mt-2 rounded bg-stock border border-slate px-3 py-2 text-sm"><span className="font-medium">{T.bannerClosed(inc.agencies.map((a) => AGENCY_NAME[a]).join(T.and), inc.closedDate ? fmtDay(inc.closedDate) : null)}</span>{T.bannerClosedTail}</p>}
-      {!closed && !isCurrent(inc, new Date(), state.currentDays || 180) && <p className="mt-2 rounded bg-stock border border-slate px-3 py-2 text-sm"><span className="font-medium">{T.bannerOlder(fmtDay(inc.lastNoticeDate || inc.firstInitiated), inc.agencies.map((a) => AGENCY_NAME[a]).join(T.and), Math.round((state.currentDays || 180) / 30))}</span>{T.bannerOlderTail}</p>}
-      <article className={`mt-2 rounded-lg bg-stock ${s.edge} p-4 pl-5`}>
-        <SeverityBadge severity={inc.severity} T={T} size="lg" />
-        <p className="mt-1 text-sm">{sevText(T, inc.severity).one}</p>
-        <h1 lang={!inc.titleParts && lang !== 'en' ? 'en' : undefined} className="mt-3 font-display text-2xl font-black leading-tight">{incidentTitleFor(lang, inc.titleParts, inc.title)}</h1>
-        {children.length > 1 && <p className="mt-1 text-sm text-slate">{children.length} notices from {inc.agencies.map((a) => AGENCY_NAME[a]).join(' and ')}</p>}
-      </article>
-      <section className="mt-3 rounded-lg bg-stock border-2 border-ink p-4" aria-labelledby="do-h">
-        <h2 id="do-h" className="font-display text-lg font-extrabold">{T.whatToDoHead}</h2>
+      {closed && <p className="mt-4 rounded-2xl bg-stock px-4 py-3 text-base"><span className="font-medium">{T.bannerClosed(inc.agencies.map((a) => AGENCY_NAME[a]).join(T.and), inc.closedDate ? fmtDay(inc.closedDate) : null)}</span>{T.bannerClosedTail}</p>}
+      {!closed && !isCurrent(inc, new Date(), state.currentDays || 180) && <p className="mt-4 rounded-2xl bg-stock px-4 py-3 text-base"><span className="font-medium">{T.bannerOlder(fmtDay(inc.lastNoticeDate || inc.firstInitiated), inc.agencies.map((a) => AGENCY_NAME[a]).join(T.and), Math.round((state.currentDays || 180) / 30))}</span>{T.bannerOlderTail}</p>}
+
+      <section className="mt-8">
+        <SevChip severity={inc.severity} T={T} size="lg" />
+        <h1 lang={!inc.titleParts && lang !== 'en' ? 'en' : undefined} className="mt-3 text-[32px] sm:text-[40px] font-medium leading-[1.15] tracking-tight [text-wrap:balance]">{incidentTitleFor(lang, inc.titleParts, inc.title)}</h1>
+        <p className="mt-2 text-lg text-slate">{sevText(T, inc.severity).one}</p>
+      </section>
+
+      <section className={`mt-8 ${CARD} p-7`} aria-labelledby="do-h">
+        <h2 id="do-h" className="text-sm font-semibold uppercase tracking-wider text-faint">{T.whatToDoHead}</h2>
         {(() => {
           // Spanish readers get USDA's own Spanish notice text when it exists — official beats any translation.
           const esChild = lang === 'es' ? children.find((c) => c.es?.instruction) : null;
           if (esChild) return (
-            <blockquote className="mt-2 border-l-4 border-ink pl-3" lang="es">
-              <p className="text-base">{esChild.es.instruction}</p>
-              <footer className="mt-1 text-xs text-slate">{T.fromNoticeEs}</footer>
+            <blockquote className="mt-2" lang="es">
+              <p className="text-xl leading-snug">{esChild.es.instruction}</p>
+              <footer className="mt-2 text-sm text-faint">{T.fromNoticeEs}</footer>
             </blockquote>
           );
           if (instr?.extracted) return (
-            <blockquote className="mt-2 border-l-4 border-ink pl-3">
-              <p className="text-base" lang={lang !== 'en' ? 'en' : undefined}>{instr.text}</p>
-              <footer className="mt-1 text-xs text-slate">{T.fromNotice(instr.source)}</footer>
+            <blockquote className="mt-2">
+              <p className="text-xl leading-snug" lang={lang !== 'en' ? 'en' : undefined}>{instr.text}</p>
+              <footer className="mt-2 text-sm text-faint">{T.fromNotice(instr.source)}</footer>
             </blockquote>
           );
           return (
             <div className="mt-2">
-              <p className="text-base font-medium">{T.dontEat}</p>
-              <p className="mt-1 text-base">
+              <p className="text-2xl font-semibold leading-snug tracking-tight">{T.dontEat}</p>
+              <p className="mt-1 text-lg leading-snug">
                 {disposal !== 'see_notice' ? dispCopy(T, disposal)
                   : lead.source === 'fda_enforcement' ? T.fdaDbNoInstr
                   : T.disp_see_notice}
               </p>
-              <p className="mt-1 text-xs text-slate">{lead.source === 'fda_enforcement' ? T.summaryDb : T.summaryNoQuote}</p>
+              <p className="mt-2 text-sm text-faint">{lead.source === 'fda_enforcement' ? T.summaryDb : T.summaryNoQuote}</p>
             </div>
           );
         })()}
-        {(instr?.extracted || (lang === 'es' && children.some((c) => c.es?.instruction))) && disposal !== 'see_notice' && <p className="mt-3 font-medium">{dispCopy(T, disposal)}</p>}
-        {lang !== 'en' && T.noticeInEnglish && !(lang === 'es' && children.some((c) => c.es?.instruction)) && <p className="mt-2 text-xs text-slate">{T.noticeInEnglish}</p>}
+        {(instr?.extracted || (lang === 'es' && children.some((c) => c.es?.instruction))) && disposal !== 'see_notice' && <p className="mt-3 text-lg font-medium">{dispCopy(T, disposal)}</p>}
+        {lang !== 'en' && T.noticeInEnglish && !(lang === 'es' && children.some((c) => c.es?.instruction)) && <p className="mt-2 text-sm text-faint">{T.noticeInEnglish}</p>}
         <AtRisk agent={inc.agent} allergens={lead.hazard.allergens} guidance={state.hazardGuidance} T={T} lang={lang} />
       </section>
 
-
-      <section className="mt-5" aria-labelledby="food-h">
-        <h2 id="food-h" className="font-display text-lg font-extrabold">{T.isThisYours}</h2>
-        <p className="mt-0.5 text-sm text-slate">{T.isThisYoursSub}</p>
+      <section className="mt-14" aria-labelledby="food-h">
+        <h2 id="food-h" className="text-2xl font-semibold tracking-tight">{T.isThisYours}</h2>
+        <p className="mt-1 text-base text-slate">{T.isThisYoursSub}</p>
         <ProductCards children={children} T={T} lang={lang} />
-        {inc.codeStatus === 'none' && <p className="mt-2 text-sm text-slate">{T.noBarcode}</p>}
-        {inc.codeStatus === 'has_lot_only' && <p className="mt-2 text-sm text-slate">{T.lotOnly}</p>}
+        {inc.codeStatus === 'none' && <p className="mt-3 text-base text-slate">{T.noBarcode}</p>}
+        {inc.codeStatus === 'has_lot_only' && <p className="mt-3 text-base text-slate">{T.lotOnly}</p>}
       </section>
 
-      <section className="mt-4" aria-labelledby="where-h">
-        <h2 id="where-h" className="font-display text-lg font-extrabold">{T.whereSold}</h2>
-        <p className="mt-1">{scopeLabelT(T, inc)}</p>
-        {inc.statesUnion.length > 0 && inc.scope !== 'nationwide' && <p className="mt-1 text-sm text-slate">{inc.statesUnion.map(stateName).join(', ')}</p>}
-        {inc.distributionIncomplete && <p className="mt-1 text-sm text-ochre font-medium">{T.distIncomplete}</p>}
-        {children.some((c) => c.distribution.rawPattern) && <details className="mt-1 text-sm"><summary className="text-inspection cursor-pointer min-h-[44px] flex items-center">{T.whatNoticeSays}</summary><p className="text-slate mt-1" lang={lang !== 'en' ? 'en' : undefined}>{children.map((c) => c.distribution.rawPattern).filter(Boolean).join(' / ')}</p></details>}
-      </section>
-
-      {outbreaks.length > 0 && (
-        <section className="mt-4" aria-labelledby="ill-h">
-          <h2 id="ill-h" className="font-display text-lg font-extrabold">{T.illnessHead}</h2>
-          {outbreaks.map((o) => (
-            <div key={o.id} className="mt-1">
-              <p className="text-base">
-                {o.cases != null ? T.obSick(o.cases) : T.obSeeAdv}{o.hospitalizations ? `, ${T.obHosp(o.hospitalizations)}` : ''}{o.deaths ? `, ${T.obDied(o.deaths)}` : ''} — <span lang={lang !== 'en' ? 'en' : undefined}>{o.foodGuess || ''}</span>.
-                {o.url && <> <a className="text-inspection underline underline-offset-2" href={o.url} target="_blank" rel="noopener">{SOURCE_LABEL[o.source] || 'Investigation page'}</a></>}
-              </p>
-              <CaseHistory state={state} outbreakId={o.id} T={T} className="mt-1" />
+      <section className="mt-14" aria-labelledby="facts-h">
+        <h2 id="facts-h" className="text-2xl font-semibold tracking-tight">{T.aboutRecall}</h2>
+        <dl className="mt-4 divide-y divide-stockdeep border-y border-stockdeep">
+          <div className="grid sm:grid-cols-[200px_1fr] gap-1 sm:gap-4 py-3.5">
+            <dt className="text-sm text-faint">{T.factWhy}</dt>
+            <dd className="text-base">{hazardLabelFor(lang, inc.titleParts) || inc.agentLabel || sevText(T, inc.severity).meaning}</dd>
+          </div>
+          <div className="grid sm:grid-cols-[200px_1fr] gap-1 sm:gap-4 py-3.5">
+            <dt className="text-sm text-faint">{T.whereSold}</dt>
+            <dd className="text-base">
+              {scopeLabelT(T, inc)}
+              {inc.statesUnion.length > 0 && inc.scope !== 'nationwide' && <span className="block text-sm text-slate">{inc.statesUnion.map(stateName).join(', ')}</span>}
+              {inc.distributionIncomplete && <span className="block text-sm text-ochre font-medium">{T.distIncomplete}</span>}
+              {children.some((c) => c.distribution.rawPattern) && <details className="mt-1 text-sm"><summary className="text-inspection cursor-pointer min-h-[44px] flex items-center font-medium">{T.whatNoticeSays}</summary><p className="text-slate mt-1" lang={lang !== 'en' ? 'en' : undefined}>{children.map((c) => c.distribution.rawPattern).filter(Boolean).join(' / ')}</p></details>}
+            </dd>
+          </div>
+          {posted && (
+            <div className="grid sm:grid-cols-[200px_1fr] gap-1 sm:gap-4 py-3.5">
+              <dt className="text-sm text-faint">{T.factPosted}</dt>
+              <dd className="text-base">{fmtDayY(posted)} · {inc.agencies.map((a) => AGENCY_NAME[a]).join(T.and)}</dd>
             </div>
-          ))}
-          <p className="mt-1 text-xs text-slate">{T.illnessLinkNote} <button type="button" onClick={onOutbreaks} className="text-inspection underline underline-offset-2">{T.allInvestigations}</button></p>
-        </section>
-      )}
+          )}
+          {outbreaks.length > 0 && (
+            <div className="grid sm:grid-cols-[200px_1fr] gap-1 sm:gap-4 py-3.5">
+              <dt className="text-sm text-faint">{T.factIllness}</dt>
+              <dd className="text-base">
+                {outbreaks.map((o) => (
+                  <div key={o.id} className="mb-2 last:mb-0">
+                    <p>
+                      {o.cases != null ? T.obSick(o.cases) : T.obSeeAdv}{o.hospitalizations ? `, ${T.obHosp(o.hospitalizations)}` : ''}{o.deaths ? `, ${T.obDied(o.deaths)}` : ''} · <span lang={lang !== 'en' ? 'en' : undefined}>{String(o.foodGuess || '').replace(/\s+/g, ' ')}</span>
+                      {o.url && <> · <a className="text-inspection font-medium" href={o.url} target="_blank" rel="noopener">{SOURCE_LABEL[o.source] || 'Investigation page'}</a></>}
+                    </p>
+                    <CaseHistory state={state} outbreakId={o.id} T={T} className="mt-1" />
+                  </div>
+                ))}
+                <p className="text-sm text-faint">{T.illnessLinkNote} <button type="button" onClick={onOutbreaks} className="text-inspection font-medium">{T.allInvestigations}</button></p>
+              </dd>
+            </div>
+          )}
+        </dl>
+      </section>
 
       {(children.length > 1 || related.length > 0) && (
-        <section className="mt-4" aria-labelledby="rel-h">
-          <h2 id="rel-h" className="font-display text-lg font-extrabold">{children.length > 1 ? T.noticesInRecall(children.length) : T.possiblyRelated}</h2>
+        <section className="mt-10" aria-labelledby="rel-h">
+          <h2 id="rel-h" className="text-xl font-semibold tracking-tight">{children.length > 1 ? T.noticesInRecall(children.length) : T.possiblyRelated}</h2>
           {confidenceLine && <p className="mt-1 text-sm text-slate">{confidenceLine}</p>}
           <ul className="mt-2 space-y-2">
             {children.map((c) => (
@@ -1032,14 +1115,14 @@ function Incident({ state, id, onBack, onOpen, onArchive, onOutbreaks, T, lang }
                 {c.publishedDate && <span className="text-slate"> · {fmtDay(c.publishedDate)}</span>}
                 {c.status !== 'ongoing' && <span className="text-slate"> · {c.status === 'terminated' ? `closed${c.terminationDate ? ` ${fmtDay(c.terminationDate)}` : ''}` : c.status}</span>}
                 {c.sourceUrl
-                  ? <> · <a className="text-inspection underline underline-offset-2" href={lang === 'es' && c.es?.sourceUrl ? c.es.sourceUrl : c.sourceUrl} target="_blank" rel="noopener">{lang === 'es' && c.es?.sourceUrl ? 'Ver el aviso (español)' : T.seeNotice}</a></>
+                  ? <> · <a className="text-inspection font-medium" href={lang === 'es' && c.es?.sourceUrl ? c.es.sourceUrl : c.sourceUrl} target="_blank" rel="noopener">{lang === 'es' && c.es?.sourceUrl ? 'Ver el aviso (español)' : T.seeNotice}</a></>
                   : c.enforcementReportUrl
-                    ? <> · <a className="text-inspection underline underline-offset-2" href={c.enforcementReportUrl} target="_blank" rel="noopener">FDA enforcement report</a> <span className="text-slate">(search for {c.nativeId})</span></>
+                    ? <> · <a className="text-inspection font-medium" href={c.enforcementReportUrl} target="_blank" rel="noopener">FDA enforcement report</a> <span className="text-slate">(search for {c.nativeId})</span></>
                     : null}
               </li>
             ))}
             {related.map((r) => (
-              <li key={r.id}><button type="button" onClick={() => onOpen(r.id)} className="text-inspection underline underline-offset-2 text-left min-h-[44px]">{incidentTitleFor(lang, r.titleParts, r.title)}</button> <span className="text-xs text-slate">{T.sameCompany}</span></li>
+              <li key={r.id}><button type="button" onClick={() => onOpen(r.id)} className="text-inspection font-medium text-left min-h-[44px]">{incidentTitleFor(lang, r.titleParts, r.title)}</button> <span className="text-xs text-slate">{T.sameCompany}</span></li>
             ))}
           </ul>
         </section>
@@ -1060,12 +1143,12 @@ function AllActive({ state, inputs, onOpen, onBack, T, lang }) {
     return r;
   }, [state, inputs, sort]);
   const btn = (v, label) => (
-    <button type="button" onClick={() => setSort(v)} aria-pressed={sort === v} className={`min-h-[44px] px-3 rounded-md border ${sort === v ? 'bg-ink text-paper border-ink' : 'border-stockdeep text-ink'}`}>{label}</button>
+    <button type="button" onClick={() => setSort(v)} aria-pressed={sort === v} className={`min-h-[44px] px-4 rounded-full border text-sm ${sort === v ? 'bg-inspectiontint text-inspectiondark border-inspection font-semibold' : 'bg-surface border-field text-ink font-medium'}`}>{label}</button>
   );
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 pb-24">
-      <div className="pt-3"><button type="button" onClick={onBack} className="text-inspection underline underline-offset-2 min-h-[44px]">{T.back}</button></div>
-      <h1 className="mt-2 font-display text-2xl font-black">{T.aaHead}</h1>
+    <main className="mx-auto w-full max-w-2xl px-5 pb-24">
+      <div className="pt-5"><button type="button" onClick={onBack} className="min-h-[48px] inline-flex items-center gap-1 text-base font-medium text-inspection"><Icon name="left" />{T.back}</button></div>
+      <h1 className="mt-3 text-3xl font-medium tracking-tight">{T.aaHead}</h1>
       <p className="mt-1 text-sm text-slate">{T.aaSub(rows.length, Math.round((state?.currentDays || 180) / 30))}{inputs.state || inputs.query ? ` ${T.aaFilters}` : ''}</p>
       <div className="mt-3 flex gap-2 text-sm" role="group" aria-label={T.aaSort}>{btn('severity', T.aaSortSerious)}{btn('newest', T.aaSortNewest)}</div>
       <ul className="mt-3 space-y-3">
@@ -1080,25 +1163,25 @@ function AllActive({ state, inputs, onOpen, onBack, T, lang }) {
 function Review({ state, onBack }) {
   const q = state?.reviewQueue || [];
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 pb-24">
-      <div className="pt-3"><button type="button" onClick={onBack} className="text-inspection underline underline-offset-2 min-h-[44px]">← Back</button></div>
-      <h1 className="mt-2 font-display text-2xl font-black">Grouping review queue</h1>
+    <main className="mx-auto w-full max-w-2xl px-5 pb-24">
+      <div className="pt-5"><button type="button" onClick={onBack} className="min-h-[48px] inline-flex items-center gap-1 text-base font-medium text-inspection"><Icon name="left" />Back</button></div>
+      <h1 className="mt-3 text-3xl font-medium tracking-tight">Grouping review queue</h1>
       <p className="mt-1 text-sm text-slate">Clusters of unmerged incidents that share a germ and a candidate ingredient word inside 30 days — the token list saying where it might be incomplete. Add good tokens to build/ingredient-tokens.json and rebuild.</p>
       {state?.parseHealth && (
-        <section className="mt-4 rounded-lg border border-stockdeep p-3">
-          <h2 className="font-display text-base font-extrabold">Parse health (this snapshot)</h2>
+        <section className={`mt-4 ${CARD} shadow-none border border-stockdeep p-4`}>
+          <h2 className="text-base font-semibold">Parse health (this snapshot)</h2>
           <p className="mt-1 text-xs text-slate">Extraction rates per source. The build fails rather than publish if these fall below floors or drop sharply — see build/health.js.</p>
           <dl className="mt-2 space-y-1 text-sm font-mono">
-            {Object.entries(state.parseHealth).map(([src, m]) => <div key={src}><dt className="inline font-bold">{src}</dt> <dd className="inline text-slate">{Object.entries(m).map(([k, v]) => `${k}=${v ?? '—'}`).join(' ')}</dd></div>)}
+            {Object.entries(state.parseHealth).map(([src, m]) => <div key={src}><dt className="inline font-semibold">{src}</dt> <dd className="inline text-slate">{Object.entries(m).map(([k, v]) => `${k}=${v ?? '—'}`).join(' ')}</dd></div>)}
           </dl>
         </section>
       )}
-      {!q.length && <p className="mt-4 rounded-lg bg-stock p-4">Queue is empty — no unexplained clusters in the current data.</p>}
+      {!q.length && <p className={`mt-4 ${CARD} p-5`}>Queue is empty — no unexplained clusters in the current data.</p>}
       <ul className="mt-3 space-y-3">
         {q.map((e, i) => (
-          <li key={i} className="rounded-lg bg-stock p-4">
+          <li key={i} className={`${CARD} p-5`}>
             <p className="font-medium">{e.agent} · {fmtDay(e.windowStart)} → {fmtDay(e.windowEnd)} · {e.incidentIds.length} incidents</p>
-            <p className="mt-1 text-sm">Candidate tokens: {e.candidateTokens.map((c) => <code key={c.token} className="font-mono bg-paper border border-stockdeep rounded px-1 mr-1">{c.token} ({c.inIncidents})</code>)}</p>
+            <p className="mt-1 text-sm">Candidate tokens: {e.candidateTokens.map((c) => <code key={c.token} className="font-mono bg-surface border border-stockdeep rounded px-1 mr-1">{c.token} ({c.inIncidents})</code>)}</p>
           </li>
         ))}
       </ul>
@@ -1210,7 +1293,7 @@ function StageFields({ o, T }) {
 }
 
 function NewTag({ T, n }) {
-  return <span className="text-xs font-bold rounded-full border-2 border-ink px-2 leading-5">{n ? T.obNewN(n) : T.obNew}</span>;
+  return <span className="text-xs font-semibold rounded-full bg-inspectiontint text-inspectiondark px-2 py-0.5">{n ? T.obNewN(n) : T.obNew}</span>;
 }
 
 /** One named-food entry. `compact` is the Ended row style; otherwise the Active card. */
@@ -1220,29 +1303,29 @@ function OutbreakEntry({ o, state, T, lang, now, compact }) {
   const q = searchQueryFor(o);
   const recallHref = q ? `#/?q=${encodeURIComponent(q.toLowerCase())}` : null;
   const links = (
-    <span className="flex flex-wrap gap-x-5">
-      {o.advisoryUrl && <a className="min-h-[44px] inline-flex items-center text-inspection font-semibold underline underline-offset-2" href={o.advisoryUrl} target="_blank" rel="noopener">{T.obAdvice(agency)}</a>}
-      {recallHref && !compact && <a className="min-h-[44px] inline-flex items-center text-inspection font-semibold underline underline-offset-2" href={recallHref}>{T.obSeeRecalled}</a>}
+    <span className="flex flex-wrap gap-x-6">
+      {o.advisoryUrl && <a className="min-h-[44px] inline-flex items-center gap-1 text-inspection font-medium" href={o.advisoryUrl} target="_blank" rel="noopener">{T.obAdvice(agency)}<Icon name="out" size={14} /></a>}
+      {recallHref && !compact && <a className="min-h-[44px] inline-flex items-center text-inspection font-medium" href={recallHref}>{T.obSeeRecalled}</a>}
     </span>
   );
-  const tags = <>{isNew(o, now) && <NewTag T={T} />}{investigationStillOpen(o) && <span className="text-xs text-slate border border-slate rounded px-1">{T.obInvOpen}</span>}</>;
+  const tags = <>{isNew(o, now) && <NewTag T={T} />}{investigationStillOpen(o) && <span className="text-xs text-slate rounded-full border border-stockdeep px-2 py-0.5">{T.obInvOpen}</span>}</>;
   if (compact) {
     return (
-      <li className="flex flex-wrap items-center justify-between gap-x-3 py-1.5 border-b border-stockdeep">
+      <li className="flex flex-wrap items-center justify-between gap-x-3 py-2 border-b border-stockdeep">
         <div className="min-w-0">
-          <p className="font-semibold flex flex-wrap items-center gap-2"><span lang="en">{foodText(o)}</span>{tags}</p>
-          <p className="text-sm text-slate">{countLine(o, state, T)} · {T.obPosted(fmtDayY(o.lastUpdated))}</p>
+          <p className="font-medium flex flex-wrap items-center gap-2"><span lang="en">{foodText(o)}</span>{tags}</p>
+          <p className="text-sm text-faint">{countLine(o, state, T)} · {T.obPosted(fmtDayY(o.lastUpdated))}</p>
         </div>
         {links}
       </li>
     );
   }
   return (
-    <li className="rounded-lg bg-stock p-4">
-      <p className="font-display text-lg font-extrabold leading-tight flex flex-wrap items-center gap-2"><span lang="en">{foodText(o)}</span>{tags}</p>
-      <p className="mt-0.5 text-sm">{countLine(o, state, T)} · {T.obPosted(fmtDayY(o.lastUpdated))}</p>
+    <li className={`${CARD} px-6 py-5`}>
+      <p className="text-xl font-semibold leading-tight tracking-tight flex flex-wrap items-center gap-2"><span lang="en">{foodText(o)}</span>{tags}</p>
+      <p className="mt-1 text-base text-slate">{countLine(o, state, T)} · {T.obPosted(fmtDayY(o.lastUpdated))}</p>
       {links}
-      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="min-h-[44px] text-sm text-slate underline underline-offset-2">{T.details} {open ? '▴' : '▾'}</button>
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="min-h-[44px] text-sm text-faint inline-flex items-center gap-1">{T.details}<Chev open={open} size={14} /></button>
       {open && <div className="mt-1"><CaseHistory state={state} outbreakId={o.id} T={T} /><StageFields o={o} T={T} /></div>}
     </li>
   );
@@ -1257,10 +1340,10 @@ function UnknownFold({ u, named, state, T, now, compact, ended }) {
   const dates = u.dates.slice(0, 3).map(fmtDayY).join(', ');
   const meta = [u.casesKnown ? T.obSickTotal(u.cases) : null, dates ? T.obPosted(dates) : null].filter(Boolean).join(' · ');
   return (
-    <li className={compact ? 'py-1.5 border-b border-stockdeep' : 'rounded-lg border border-dashed border-slate px-4 py-3'}>
+    <li className={compact ? 'py-2 border-b border-stockdeep' : 'rounded-2xl bg-stock px-6 py-4'}>
       <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="w-full text-left min-h-[44px]">
-        <span className="font-semibold flex flex-wrap items-center gap-2">{head}{newN > 0 && !ended && <NewTag T={T} n={newN} />}<span aria-hidden="true" className="ml-auto text-slate">{open ? '▴' : '▾'}</span></span>
-        <span className="block text-sm text-slate">{meta}</span>
+        <span className={`${compact ? 'font-medium' : 'text-lg font-semibold'} flex flex-wrap items-center gap-2`}>{head}{newN > 0 && !ended && <NewTag T={T} n={newN} />}<span className="ml-auto text-faint"><Chev open={open} /></span></span>
+        <span className="block text-sm text-faint">{meta}</span>
       </button>
       {open && (
         <ul className="mt-1 pl-3 border-l-2 border-stockdeep">
@@ -1276,7 +1359,7 @@ function UnknownFold({ u, named, state, T, now, compact, ended }) {
   );
 }
 
-function Outbreaks({ state, onBack, onOpen, onRefresh, T, lang, initialTab = 'active' }) {
+function Outbreaks({ state, onBack, onOpen, onRefresh, T, lang, setLang = () => {}, initialTab = 'active' }) {
   const core = state?.sources?.fda_core;
   useHistory(state, true, onRefresh || (() => {}));
   const [tab, setTab] = useState(initialTab);
@@ -1296,45 +1379,41 @@ function Outbreaks({ state, onBack, onOpen, onRefresh, T, lang, initialTab = 'ac
     if (!b?.summary) return null;
     return { text: b.summary, verified: (b.summaryChecks || []).length > 0, fallback: !e[lang] && lang !== 'en' };
   };
-  const chip = 'min-h-[44px] px-3.5 rounded-full border-2 text-sm font-semibold';
+  const chip = 'min-h-[44px] px-4 rounded-full border text-sm';
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 pb-24">
-      <div className="pt-3"><button type="button" onClick={onBack} className="text-inspection underline underline-offset-2 min-h-[48px] font-medium">{T.obSearchRecalls}</button></div>
-      <h1 className="mt-1 font-display text-3xl font-black leading-tight">{T.obHead}</h1>
-      <p className="mt-3 text-lg">{T.obIntro2}</p>
-      <p className="mt-2 text-sm text-slate">
-        {T.obFrom}
-        {core?.dataThroughDate ? <> · <span className={stale ? 'text-stamp font-medium' : ''}>{T.obDated(fmtDay(core.dataThroughDate))}</span>{stale ? T.fr_stale : ''}</> : null}
-        {core?.lastError ? <span className="text-stamp"> · {T.obFetchFailed(core.lastError.message)}</span> : null}
-        {' · '}<a className="text-inspection underline underline-offset-2" href="#/about">{T.obAboutList}</a>
-      </p>
+    <main className="mx-auto w-full max-w-2xl px-5 pb-24">
+      <Header section="outbreaks" onHome={onBack} onOutbreaks={() => {}} activeOutbreaks={split.activeN} lang={lang} setLang={setLang} T={T} />
+      <h1 className="mt-14 sm:mt-16 text-[34px] sm:text-[40px] font-medium leading-[1.15] tracking-tight">{T.navOutbreaks}</h1>
+      <p className="mt-3 text-lg leading-snug text-body">{T.obIntro2}</p>
+      {core?.lastError ? <p className="mt-2 text-sm text-stamp">{T.obFetchFailed(core.lastError.message)}</p> : null}
+      {stale ? <p className="mt-2 text-sm text-stamp font-medium">{T.obDated(fmtDay(core.dataThroughDate))}{T.fr_stale}</p> : null}
 
-      <div role="group" aria-label={T.obTabsLabel} className="mt-6 grid grid-cols-2 gap-1 p-1 rounded-xl bg-stock">
+      <div role="group" aria-label={T.obTabsLabel} className="mt-8 grid grid-cols-2 gap-1 p-1 rounded-2xl bg-track">
         {[['active', T.obTabActive, split.activeN], ['ended', T.obTabEnded, split.endedN]].map(([id, label, n]) => (
           <button key={id} type="button" aria-pressed={tab === id} onClick={() => { setTab(id); setGerm('all'); }}
-            className={`min-h-[56px] rounded-lg flex items-center justify-center gap-2 ${tab === id ? 'bg-ink text-paper' : 'text-ink'}`}>
-            <span className="font-bold">{label}</span><span className="text-sm">{n}</span>
+            className={`min-h-[52px] rounded-xl flex items-center justify-center gap-2 ${tab === id ? 'bg-surface text-ink shadow-card' : 'text-slate'}`}>
+            <span className="font-semibold">{label}</span><span className="text-sm text-faint">{n}</span>
           </button>
         ))}
       </div>
       <div role="group" aria-label={T.obChipsLabel} className="mt-4 flex flex-wrap gap-2">
         {chips.map((c) => (
           <button key={c.agent} type="button" aria-pressed={germ === c.agent} onClick={() => setGerm(c.agent)}
-            className={`${chip} ${germ === c.agent ? 'bg-ink text-paper border-ink' : 'bg-paper border-stockdeep text-ink'}`}>{c.agent === 'all' ? T.obAll : germName(c.agent)} {c.n}</button>
+            className={`${chip} ${germ === c.agent ? 'bg-inspectiontint text-inspectiondark border-inspection font-semibold' : 'bg-surface border-field text-ink font-medium'}`}>{c.agent === 'all' ? T.obAll : germName(c.agent)} {c.n}</button>
         ))}
       </div>
-      <p className="mt-4 text-sm text-slate" aria-live="polite">{tab === 'active' ? T.obShowingActive(shown.activeN, germ === 'all' ? '' : germName(germ)) : T.obShowingEnded(shown.endedN, germ === 'all' ? '' : germName(germ))}</p>
+      <p className="sr-only" aria-live="polite">{tab === 'active' ? T.obShowingActive(shown.activeN, germ === 'all' ? '' : germName(germ)) : T.obShowingEnded(shown.endedN, germ === 'all' ? '' : germName(germ))}</p>
 
       {tab === 'active' && (
         <>
-          {!shown.active.length && <p className="mt-4 rounded-lg bg-stock p-4">{T.obNoneActive}</p>}
+          {!shown.active.length && <p className={`mt-6 ${CARD} p-5`}>{T.obNoneActive}</p>}
           {shown.active.map((g) => {
             const sum = summaryFor(g.agent);
             return (
-              <section key={g.agent} className="mt-5" aria-labelledby={`g-${g.agent}`}>
-                <h2 id={`g-${g.agent}`} className="font-display text-xl font-extrabold">{germName(g.agent)}</h2>
-                {sum && <p className="mt-0.5 text-sm" lang={sum.fallback ? 'en' : undefined}>{sum.text}{!sum.verified && <span className="text-ochre font-medium"> · {T.obSummaryUnverified}</span>}</p>}
-                <ul className="mt-2 space-y-2.5">
+              <section key={g.agent} className="mt-11" aria-labelledby={`g-${g.agent}`}>
+                <h2 id={`g-${g.agent}`} className="text-2xl font-semibold tracking-tight">{germName(g.agent)}</h2>
+                {sum && <p className="mt-1 text-base text-slate" lang={sum.fallback ? 'en' : undefined}>{sum.text}{!sum.verified && <span className="text-ochre font-medium"> · {T.obSummaryUnverified}</span>}</p>}
+                <ul className="mt-4 space-y-3">
                   {g.named.map((o) => <OutbreakEntry key={o.id} o={o} state={state} T={T} lang={lang} now={now} />)}
                   <UnknownFold u={g.unknown} named={g.named.length > 0} state={state} T={T} now={now} />
                 </ul>
@@ -1349,13 +1428,13 @@ function Outbreaks({ state, onBack, onOpen, onRefresh, T, lang, initialTab = 'ac
           {shown.ended.map((y) => {
             const isOpen = !!openYears[y.year];
             return (
-              <section key={y.year} className="mt-3 border-t border-stockdeep">
-                <h2><button type="button" aria-expanded={isOpen} onClick={() => setOpenYears({ ...openYears, [y.year]: !isOpen })} className="w-full min-h-[56px] flex items-center gap-3 text-left">
-                  <span className="flex-1 font-display text-xl font-extrabold">{y.year}</span><span className="text-sm text-slate">{T.obYearN(y.n)}</span><span aria-hidden="true">{isOpen ? '▴' : '▾'}</span>
+              <section key={y.year} className="mt-4 first:mt-7 border-t border-stockdeep">
+                <h2><button type="button" aria-expanded={isOpen} onClick={() => setOpenYears({ ...openYears, [y.year]: !isOpen })} className="w-full min-h-[60px] flex items-center gap-3 text-left">
+                  <span className="flex-1 text-[22px] font-semibold">{y.year}</span><span className="text-sm text-faint">{T.obYearN(y.n)}</span><span className="text-faint"><Chev open={isOpen} size={20} /></span>
                 </button></h2>
                 {isOpen && y.groups.map((g) => (
-                  <div key={g.agent} className="mt-1 mb-3">
-                    <p className="font-semibold">{germName(g.agent)} <span className="text-slate font-normal">· {g.n}</span></p>
+                  <div key={g.agent} className="mt-1 mb-4">
+                    <p className="text-lg font-semibold">{germName(g.agent)} <span className="text-faint font-normal">· {g.n}</span></p>
                     <ul>
                       {g.named.map((o) => <OutbreakEntry key={o.id} o={o} state={state} T={T} lang={lang} now={now} compact />)}
                       <UnknownFold u={g.unknown} named={g.named.length > 0} state={state} T={T} now={now} compact ended />
@@ -1368,12 +1447,15 @@ function Outbreaks({ state, onBack, onOpen, onRefresh, T, lang, initialTab = 'ac
         </>
       )}
 
-      <p className="mt-6 text-sm text-slate">
-        {T.obFdaBack}{' '}
-        <a className="text-inspection underline underline-offset-2" href="https://www.fda.gov/food/foodborne-pathogens/investigations-foodborne-illness-outbreaks" target="_blank" rel="noopener">{T.obFdaFull}</a>
-        {' · '}<a className="text-inspection underline underline-offset-2" href="https://www.cdc.gov/foodborne-outbreaks/" target="_blank" rel="noopener">{T.obCdcList}</a>
-      </p>
-      <p className="mt-3 text-xs text-slate">{T.obOurs}</p>
+      <footer className="mt-14 pt-6 border-t border-stockdeep text-sm text-faint flex flex-col gap-2">
+        <p>
+          {T.obFrom}{core?.dataThroughDate ? ` · ${T.obDated(fmtDay(core.dataThroughDate))}` : ''}. {T.obFdaBack}{' '}
+          <a className="text-inspection font-medium" href="https://www.fda.gov/food/foodborne-pathogens/investigations-foodborne-illness-outbreaks" target="_blank" rel="noopener">{T.obFdaFull}</a>
+          {' · '}<a className="text-inspection font-medium" href="https://www.cdc.gov/foodborne-outbreaks/" target="_blank" rel="noopener">{T.obCdcList}</a>
+          {' · '}<a className="text-inspection font-medium" href="#/about">{T.obAboutList}</a>
+        </p>
+        <p>{T.obOurs}</p>
+      </footer>
     </main>
   );
 }
@@ -1384,24 +1466,24 @@ function About({ state, onBack, T, lang }) {
   const SRC_KEY = { fda_enforcement: 'src_fda', fsis_recall: 'src_usda', fda_rss: 'src_rss', fda_core: 'src_core', cdc_outbreaks: 'src_cdc', fsis_mpi: 'src_mpi', fda_live: 'src_live', snapshot: 'src_snap' };
   const w = (sev) => sevText(T, sev);
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 pb-24">
-      <div className="pt-3"><button type="button" onClick={onBack} className="text-inspection underline underline-offset-2 min-h-[44px]">{T.back}</button></div>
-      <h1 className="mt-2 font-display text-2xl font-black">{T.aboutData}</h1>
-      <section className="mt-3 rounded-lg bg-stock p-4">
-        <h2 className="font-display text-lg font-extrabold">{T.whyHead}</h2>
+    <main className="mx-auto w-full max-w-2xl px-5 pb-24">
+      <div className="pt-5"><button type="button" onClick={onBack} className="min-h-[48px] inline-flex items-center gap-1 text-base font-medium text-inspection"><Icon name="left" />{T.back}</button></div>
+      <h1 className="mt-3 text-3xl font-medium tracking-tight">{T.aboutData}</h1>
+      <section className={`mt-4 ${CARD} p-5`}>
+        <h2 className="text-xl font-semibold tracking-tight">{T.whyHead}</h2>
         <p className="mt-2 text-sm">{T.whyBody}</p>
-        <p className="mt-2 text-xs text-slate">{T.whySource} <a className="text-inspection underline underline-offset-2" href="https://www.foodnavigator.com/Article/2026/02/16/fda-and-usda-staff-cuts-under-trump-raise-food-safety-risks/" target="_blank" rel="noopener" lang="en">“Trump purge at FDA and USDA triggers food safety ‘brain drain’” — FoodNavigator, Feb 16, 2026</a> · <span lang="en">based on US OPM workforce data</span></p>
+        <p className="mt-2 text-xs text-slate">{T.whySource} <a className="text-inspection font-medium" href="https://www.foodnavigator.com/Article/2026/02/16/fda-and-usda-staff-cuts-under-trump-raise-food-safety-risks/" target="_blank" rel="noopener" lang="en">“Trump purge at FDA and USDA triggers food safety ‘brain drain’” — FoodNavigator, Feb 16, 2026</a> · <span lang="en">based on US OPM workforce data</span></p>
         <p className="mt-3 flex gap-3 items-center flex-wrap"><FeedbackLink T={T} lang={lang} /><DonateLink T={T} /></p>
       </section>
       <p className="mt-4">{T.abIntro}</p>
-      <h2 className="mt-4 font-display text-lg font-extrabold">{T.abBlindHead}</h2>
+      <h2 className="mt-4 text-xl font-semibold tracking-tight">{T.abBlindHead}</h2>
       <p className="mt-2 text-sm">{T.abBlindBody}</p>
-      <h2 className="mt-4 font-display text-lg font-extrabold">{T.abWordsHead}</h2>
+      <h2 className="mt-4 text-xl font-semibold tracking-tight">{T.abWordsHead}</h2>
       <ul className="mt-2 space-y-1 text-sm">
         {['class_1', 'class_2', 'class_3', 'alert'].map((sev) => <li key={sev}><span className="font-medium">{w(sev).label}</span> — {w(sev).one}</li>)}
         <li><span className="font-medium">{T.abW_closedT}</span> — {T.abW_closed}</li>
       </ul>
-      <h2 className="mt-4 font-display text-lg font-extrabold">{T.abSourcesHead}</h2>
+      <h2 className="mt-4 text-xl font-semibold tracking-tight">{T.abSourcesHead}</h2>
       <ul className="mt-2 space-y-2 text-sm">
         {Object.entries(s).map(([id, src]) => (
           <li key={id} className="rounded bg-stock p-2">
@@ -1412,9 +1494,10 @@ function About({ state, onBack, T, lang }) {
         ))}
       </ul>
       {state?.archive?.available && <p className="mt-3 text-sm text-slate">{T.ab_archiveNote(state.archive.available.incidents)}</p>}
+      <p className="mt-4 text-sm text-slate">{T.rememberedNote} {T.stateHint}</p>
       {state?.cdcCounts && (
-        <section className="mt-4 rounded-lg border border-stockdeep p-3" aria-labelledby="cmp-h">
-          <h2 id="cmp-h" className="font-display text-base font-extrabold">{T.cmpHead}</h2>
+        <section className={`mt-4 ${CARD} shadow-none border border-stockdeep p-4`} aria-labelledby="cmp-h">
+          <h2 id="cmp-h" className="text-base font-semibold">{T.cmpHead}</h2>
           <p className="mt-1 text-xs text-slate">{T.cmpIntro}</p>
           <dl className="mt-2 space-y-1 text-sm">
             {Object.entries(state.cdcCounts.byAgent).map(([a, n]) => {
@@ -1422,7 +1505,7 @@ function About({ state, onBack, T, lang }) {
               return <div key={a} className="flex flex-wrap gap-x-2"><dt className="font-medium">{agentLabel(lang, a) || a}</dt><dd className="text-slate">{T.cmpRow(n, fdaN)}</dd></div>;
             })}
           </dl>
-          <p className="mt-2 text-xs text-slate">{T.cmpAsOf(fmtDay(state.cdcCounts.lastUpdated))} <a className="text-inspection underline underline-offset-2" href="https://www.cdc.gov/foodborne-outbreaks/" target="_blank" rel="noopener">{T.cmpLink}</a></p>
+          <p className="mt-2 text-xs text-slate">{T.cmpAsOf(fmtDay(state.cdcCounts.lastUpdated))} <a className="text-inspection font-medium" href="https://www.cdc.gov/foodborne-outbreaks/" target="_blank" rel="noopener">{T.cmpLink}</a></p>
         </section>
       )}
       <p className="mt-3 text-xs text-slate">{T.ab_review}</p>
@@ -1486,17 +1569,17 @@ function App() {
     <>
       <div aria-live="polite" className="sr-only">{msg}</div>
       {state?.snapshot?.fixture && view.name !== 'about' && (
-        <p className="bg-ochre text-paper text-center text-xs py-1 px-2">
+        <p className="bg-ochre text-surface text-center text-xs py-1 px-2">
           {(state.live?.fetchedAt || state.fsisLive?.fetchedAt)
             ? T.bannerMixed
             : 'Sample data — fictional recalls for testing. Not real.'}
         </p>
       )}
-      {state?.fatal && <p className="bg-stamp text-paper text-sm px-4 py-2">The page couldn’t start its data check: {state.fatal}. Reload to try again.</p>}
+      {state?.fatal && <p className="bg-stamp text-surface text-sm px-4 py-2">The page couldn’t start its data check: {state.fatal}. Reload to try again.</p>}
       {view.name === 'home' && <Home state={state} inputs={inputs} setInputs={setInputs} onOpen={open} onAbout={() => setView({ name: 'about' })} onOutbreaks={() => setView({ name: 'outbreaks' })} onActive={() => setView({ name: 'active' })} announce={announce} onArchive={onArchive} T={T} lang={lang} setLang={setLang} />}
       {view.name === 'active' && state && <AllActive state={state} inputs={inputs} onOpen={open} onBack={home} T={T} lang={lang} />}
       {view.name === 'review' && <Review state={state} onBack={home} />}
-      {view.name === 'outbreaks' && <Outbreaks state={state} onBack={home} onOpen={open} onRefresh={onArchive} T={T} lang={lang} />}
+      {view.name === 'outbreaks' && <Outbreaks state={state} onBack={home} onOpen={open} onRefresh={onArchive} T={T} lang={lang} setLang={setLang} />}
       {view.name === 'incident' && state && <Incident state={state} id={view.id} onBack={home} onOpen={open} onArchive={onArchive} onOutbreaks={() => setView({ name: 'outbreaks' })} T={T} lang={lang} />}
       {view.name === 'about' && <About state={state} onBack={home} T={T} lang={lang} />}
     </>
