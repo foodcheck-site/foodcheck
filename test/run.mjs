@@ -222,7 +222,7 @@ await ta('i18n coverage: every language has every key', async () => {
   const { i18nCoverage } = await import('../src/i18n.js');
   for (const [lang, missing] of Object.entries(i18nCoverage())) assert.deepEqual(missing, [], `${lang} missing: ${missing.join(', ')}`);
 });
-await ta('i18n falls back to english', async () => { const { t } = await import('../src/i18n.js'); const T = t('ko'); assert.equal(T.sev_class_1[0], '1등급'); assert.equal(t('es').disp_discard, 'Tírelo a la basura.'); assert.equal(t('en').notMatchingFold(5), 'Not matching what you entered (5)'); });
+await ta('i18n falls back to english', async () => { const { t } = await import('../src/i18n.js'); const T = t('ko'); assert.equal(T.sev_class_1[0], '1등급'); assert.equal(t('es').disp_discard, 'Tírelo a la basura.'); assert.equal(t('en').notMatchingFold(5), 'Other recalls right now (5)'); });
 
 console.log('drift detection');
 const { computeParseHealth, checkDrift } = await import('../build/health.js');
@@ -290,7 +290,8 @@ t('history: summary reports tracked count and earliest sighting', () => {
 });
 
 console.log('outbreaks page grouping');
-const { splitOutbreaks, filterByAgent, foodIdentified, searchQueryFor, isNew, advisoryAgency, investigationStillOpen } = await import('../src/data/outbreaks.js');
+const awaitedOutbreaks = await import('../src/data/outbreaks.js');
+const { splitOutbreaks, filterByAgent, foodIdentified, searchQueryFor, isNew, advisoryAgency, investigationStillOpen } = awaitedOutbreaks;
 const O = (over = {}) => ({ id: 'fda_core:' + Math.random().toString(36).slice(2, 7), source: 'fda_core', agent: 'salmonella', foodGuess: 'Sprouts', cases: 10, status: 'active', eventStatus: 'ongoing', lastUpdated: '2026-09-10', url: null, advisoryUrl: null, fields: {}, linkedIncidentIds: [], ...over });
 const NOW = new Date('2026-10-19T12:00:00Z');
 t('event status: ended outbreak with open investigation is Ended, tagged, never dropped', () => {
@@ -329,6 +330,13 @@ t('search query: parentheticals and "suspect" dropped, adjectives kept, unknown 
   assert.equal(searchQueryFor(O({ foodGuess: 'Not Yet Identified' })), null);
 });
 t('advisory agency from host', () => { assert.equal(advisoryAgency(O({ advisoryUrl: 'https://www.fsis.usda.gov/x' })), 'USDA'); assert.equal(advisoryAgency(O({ advisoryUrl: 'https://www.fda.gov/x' })), 'FDA'); assert.equal(advisoryAgency(O()), null); });
+
+t('ended summary: foods de-duplicated with counts, unknown count carried', () => {
+  const { summarizeGroup, groupByAgent } = awaitedOutbreaks;
+  const g = groupByAgent([O({ foodGuess: 'Moringa Leaf Powder' }), O({ foodGuess: 'moringa leaf powder' }), O({ foodGuess: 'Eggs' }), O({ foodGuess: 'Not Identified' })])[0];
+  const r = summarizeGroup(g);
+  assert.deepEqual(r.foods.map((f) => [f.text, f.n]), [['Moringa Leaf Powder', 2], ['Eggs', 1]]); assert.equal(r.unknown, 1);
+});
 
 console.log('scrapers');
 const { scrapeCdcCounts, parseRss } = await import('../build/scrape.js');

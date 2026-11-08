@@ -102,3 +102,20 @@ export function filterByAgent(split, agent) {
     endedN: split.ended.reduce((s, y) => s + y.groups.filter(keep).reduce((t, g) => t + g.n, 0), 0),
   };
 }
+
+/**
+ * One-line summary of a germ group for the Ended list, in the mockup's shape:
+ * "Jalapeño peppers, eggs, moringa leaf powder (2), cantaloupe, +2 not found".
+ * Foods are de-duplicated case-insensitively (count shown when > 1), kept in date order.
+ * Returns { foods: [{ text, n }], unknown } — the caller renders and localizes "+N not found".
+ */
+export function summarizeGroup(g) {
+  const seen = new Map();
+  for (const o of g.named) {
+    const t = foodText(o);
+    const k = t.toLowerCase();
+    if (!seen.has(k)) seen.set(k, { text: t, n: 0 });
+    seen.get(k).n++;
+  }
+  return { foods: [...seen.values()], unknown: g.unknown.n };
+}

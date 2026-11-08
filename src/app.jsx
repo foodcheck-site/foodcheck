@@ -7,7 +7,7 @@
 // file and runs it as an inline module on the page, so the page's URL is the base.
 import { loadAll, loadArchive, loadHistory, freshnessLines, resolveIncident, SOURCE_LABEL } from './src/data/live.js';
 import { agentLabel } from './src/i18n.js';
-import { splitOutbreaks, filterByAgent, foodText, searchQueryFor, advisoryAgency, isNew, investigationStillOpen } from './src/data/outbreaks.js';
+import { splitOutbreaks, filterByAgent, foodText, searchQueryFor, advisoryAgency, isNew, investigationStillOpen, summarizeGroup } from './src/data/outbreaks.js';
 import { orderIncidents, evaluate, normalizeStateInput, normalizeUpcInput, normalizeLotInput, upcInputState, scopeLabel, stateName, SEVERITY_RANK, isCurrent } from './src/data/match.js';
 import { STATES, DISPOSAL_COPY, ALLERGEN_LABEL } from './src/data/parse.js';
 import { t as makeT, LANGS, langTag, incidentTitleFor, plainSentenceFor, foodLabelFor, hazardLabelFor } from './src/i18n.js';
@@ -103,12 +103,12 @@ function sevText(T, severity) {
 }
 
 /** Tinted pill, one word, shaped dot. The old all-caps CLASS I badge made every card shout alike. */
-function SevChip({ severity, T, size = 'sm' }) {
+function SevChip({ severity, T, size = 'sm', long = false }) {
   const key = SEVERITY[severity] ? severity : 'unclassified';
   const s = SEVERITY[key];
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full font-semibold ${s.chip} ${size === 'lg' ? 'px-3 py-1 text-sm' : 'px-2.5 py-0.5 text-sm'}`}>
-      <i className={`dot ${s.dot}`} aria-hidden="true" />{T[`sevShort_${key}`]}
+      <i className={`dot ${s.dot}`} aria-hidden="true" />{long ? sevText(T, key).meaning : T[`sevShort_${key}`]}
     </span>
   );
 }
@@ -321,9 +321,9 @@ function SearchBox({ inputs, setInputs, id, T, onSearch }) {
       </div>
       <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
         <button type="submit" className={BTN_PRIMARY}>{T.searchBtn}</button>
-        <button type="button" onClick={() => setScanning(true)} className={BTN_QUIET}><Icon name="barcode" size={20} />{T.scan}</button>
+        <button type="button" onClick={() => setScanning(true)} className={BTN_QUIET}><Icon name="barcode" size={20} />{T.scanBarcode}</button>
       </div>
-      <button type="button" onClick={() => setMore(!more)} aria-expanded={more} className="mt-1 min-h-[44px] text-sm text-inspection font-medium inline-flex items-center gap-1">{more ? T.fewerWays : T.moreWays}<Chev open={more} size={14} /></button>
+      <button type="button" onClick={() => setMore(!more)} aria-expanded={more} className="mt-1 min-h-[44px] text-sm text-faint font-medium inline-flex items-center gap-1">{more ? T.fewerWays : T.moreWays}<Chev open={more} size={14} /></button>
       {more && (
         <div className="mt-1 grid gap-3 sm:grid-cols-2 rounded-2xl bg-stock p-4">
           <label className="block">
@@ -367,7 +367,6 @@ function IncidentCard({ row, onOpen, T, lang, recalls, archived = false }) {
   const olderOpen = archived && inc.status === 'active';
   const hasMatch = !['none', 'nationwide', 'state_only'].includes(match.matchBasis);
   const sample = row.sample;
-  const [showDetails, setShowDetails] = useState(false);
   // Food first. The October 2026 UX pass flipped the card: people scan a list for the food they
   // own, not for the hazard sentence. Headline = the product when one notice names it briefly,
   // else the food category in their language; second line = hazard · where sold. The plain
@@ -387,14 +386,10 @@ function IncidentCard({ row, onOpen, T, lang, recalls, archived = false }) {
   const headlineEn = useDesc || (!inc.titleParts && lang !== 'en');
   const who = inc.titleParts?.whoKind === 'firm' ? inc.titleParts.who : (single?.firm?.raw || null);
   const hazard = hazardLabelFor(lang, inc.titleParts) || inc.agentLabel || '';
-  const plain = plainSentenceFor(lang, inc, inc.scope === 'single_state' ? stateName(inc.statesUnion[0]) : null);
-  const title = incidentTitleFor(lang, inc.titleParts, inc.title);
-  const sevMeaning = sevText(T, inc.severity);
-  const cardSpeech = [headline, plain || sevMeaning.one, hasMatch && mt.line ? mt.line : null].filter(Boolean).join('. ');
   const reachTone = match.matchBasis === 'other_state' ? 'text-slate' : ['upc', 'upc_unverified', 'lot', 'state_and_product'].includes(match.matchBasis) ? 'text-stamp' : 'text-ochre';
   return (
     <li className={`fade-in ${CARD} hover:shadow-cardhover`}>
-      <button type="button" onClick={() => onOpen(inc.id)} className="w-full text-left p-5 pr-4 pb-2 min-h-[44px] rounded-2xl flex items-center gap-4">
+      <button type="button" onClick={() => onOpen(inc.id)} className="w-full text-left py-5 pl-6 pr-5 min-h-[44px] rounded-2xl flex items-center gap-4">
         <span className="flex-1 min-w-0 flex flex-col gap-1">
           <span className="flex gap-2.5 items-center flex-wrap text-sm text-faint">
             <SevChip severity={inc.severity} T={T} />
@@ -410,26 +405,6 @@ function IncidentCard({ row, onOpen, T, lang, recalls, archived = false }) {
         </span>
         <span className="text-faint"><Icon name="right" size={22} /></span>
       </button>
-      {/* Siblings, not nested — buttons inside the card's open-button would be invalid HTML and
-          would also trigger navigation on every tap. */}
-      <div className="px-5 pb-3 flex items-center gap-3 flex-wrap text-sm">
-        <SpeakButton text={cardSpeech} lang={lang} T={T} />
-        <button type="button" onClick={() => setShowDetails(!showDetails)} aria-expanded={showDetails} className="min-h-[44px] inline-flex items-center gap-1 text-inspection font-medium">{T.details}<Chev open={showDetails} size={14} /></button>
-      </div>
-      {showDetails && (
-        <div className="px-5 pb-5 -mt-1 text-sm border-t border-stockdeep pt-3">
-          {plain && <p className="text-base">{plain}</p>}
-          <p className="mt-1 text-faint" lang={!inc.titleParts && lang !== 'en' ? 'en' : undefined}>{title}</p>
-          <p className="mt-2"><SeverityBadge severity={inc.severity} T={T} /></p>
-          <p className="mt-1">{sevMeaning.one}</p>
-          {hasMatch && mt.line && <p className="mt-1 text-slate">{mt.line}</p>}
-          <p className="mt-2 text-slate flex flex-wrap gap-x-3 gap-y-0.5">
-            <span>{inc.distributionIncomplete && inc.scope !== 'nationwide' ? T.listIncomplete : null}</span>
-            <span>{T.notices(inc.recallIds.length)} · {inc.agencies.map((a) => a === 'FSIS' ? 'USDA' : a).join(' + ')}</span>
-            {inc.illnessSummary?.cases ? <span className="text-ink font-medium">{T.illnesses(inc.illnessSummary.cases)}</span> : null}
-          </p>
-        </div>
-      )}
     </li>
   );
 }
@@ -445,9 +420,9 @@ function splitLead(text) {
  * past: caution styling when nothing matched (an empty result is the moment people most need to
  * read the caveat), calm styling when something did. role="status" so screen readers announce it.
  */
-function ResultVerdict({ matched, T, onClear, shareLabel }) {
+function ResultVerdict({ matched, T, shareLabel, query }) {
   const none = matched === 0;
-  const [lead, rest] = splitLead(none ? T.nothingMatched : T.matchedCount(matched));
+  const [lead, rest] = splitLead(none ? T.nothingMatched(query) : T.matchedCount(matched, query));
   return (
     <div role="status" className={`mt-4 ${CARD} p-6 ${none ? 'border border-ochre' : ''}`}>
       <p className="text-3xl font-medium leading-tight tracking-tight flex items-start gap-2">{none && <span className="text-ochre mt-1.5"><Icon name="warn" size={22} /></span>}<span>{lead}</span></p>
@@ -455,7 +430,6 @@ function ResultVerdict({ matched, T, onClear, shareLabel }) {
       <p className="mt-4 flex gap-2 flex-wrap">
         {/* The link is the share: state, words, barcode all travel in the URL, nothing on a server. */}
         {shareLabel && <ShareButton title={shareLabel} label={shareLabel} T={T} />}
-        {onClear && <button type="button" onClick={onClear} className={PILL}><Icon name="x" size={16} />{T.startOver}</button>}
       </p>
     </div>
   );
@@ -531,8 +505,8 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
     if (state.phase === 'done' && state.fsisLive.added) announce(`${state.fsisLive.added} more from USDA.`);
   }, [state?.phase]);
 
-  const [aboutOpen, setAboutOpen] = useState(false);
   const anyFailing = state ? Object.values(state.sources || {}).some((x) => x?.lastError || x?.liveError) : false;
+  const stale = state?.snapshot?.dataThroughDate ? (Date.now() - new Date(state.snapshot.dataThroughDate + 'T12:00:00Z')) / 86400000 > 21 : false;
   const checkedAt = state?.live?.fetchedAt || state?.sources?.snapshot?.fetchedAt || null;
   const activeOutbreaks = state?.outbreaks ? state.outbreaks.filter((o) => o.source === 'fda_core' && o.status === 'active' && o.eventStatus !== 'ended').length : 0;
   return (
@@ -541,28 +515,26 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
 
       {/* First screen: the question, as the largest thing on the page, then one box and two buttons.
           No subtext under either — the placeholder and the About page carry the hints. */}
-      <section aria-labelledby="ask" className="pt-14 sm:pt-16">
+      <section aria-labelledby="ask" className="pt-[72px]">
         <h1 id="ask" className="text-[34px] sm:text-[40px] font-medium leading-[1.15] tracking-tight [text-wrap:balance]">{T.tagline}</h1>
         <SearchBox id="narrow" inputs={inputs} setInputs={setInputs} T={T} onSearch={() => { announce(typedProduct ? T.sortedForYou : T.activeNow); scrollToList(); }} />
         <StateRow inputs={inputs} setInputs={setInputs} T={T} />
       </section>
 
-      <section aria-labelledby="active-h" className="mt-14 sm:mt-16">
-        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+      <section aria-labelledby="active-h" className="mt-[72px]">
+        <div className={`flex items-baseline justify-between gap-3 flex-wrap ${typedProduct ? 'sr-only' : ''}`}>
           <h2 id="active-h" className="text-2xl font-semibold tracking-tight scroll-mt-4">
             {typedProduct ? T.sortedForYou : T.activeNow}
             {loading && <span className="ml-2 text-sm font-normal text-faint">{T.stillChecking}</span>}
           </h2>
-          <button type="button" onClick={() => setAboutOpen(!aboutOpen)} aria-expanded={aboutOpen} className={`min-h-[44px] text-sm font-medium inline-flex items-center gap-1 ${anyFailing ? 'text-stamp' : 'text-inspection'}`}>{T.obAboutList}<Chev open={aboutOpen} size={14} /></button>
+          <button type="button" onClick={onAbout} className="min-h-[44px] text-sm font-medium text-inspection">{T.obAboutList}</button>
         </div>
-        <p className="mt-1 text-sm text-faint">{inputs.state ? T.listSubState(stateName(inputs.state)) : T.listSubAll}{checkedAt ? ` · ${T.checked} ${fmtTime(checkedAt)}` : ''}{anyFailing ? <span className="text-stamp font-medium"> · {T.sourcesFailing(1)}</span> : null}</p>
-        {/* Freshness detail and the blind-spot bar: one tap away, auto-open when a source is failing
-            (principle 4 — every omission stated on-page). */}
-        {(aboutOpen || anyFailing) && <div className={`mt-3 ${CARD} shadow-none border border-stockdeep px-4 pb-3`}><Stamp state={state} onAbout={onAbout} T={T} /><BlindSpotBar state={state} T={T} /></div>}
-        {typedProduct && <ResultVerdict matched={matched.length} T={T} onClear={() => { setInputs({ ...EMPTY_INPUTS, state: inputs.state }); announce(T.startOver); document.getElementById('narrow')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} shareLabel={T.shareSearch} />}
-        {!typedProduct && state?.archive?.available?.olderOpen > 0 && (
-          <p className="mt-2 text-sm text-faint">{T.olderOpenNote(state.archive.available.olderOpen, Math.round((state.currentDays || 180) / 30))}</p>
-        )}
+        {!typedProduct && <p className="mt-1 text-sm text-faint">{inputs.state ? T.listSubState(stateName(inputs.state)) : T.listSubAll}</p>}
+        {/* Freshness detail and the blind-spot bar appear only when something is wrong — a failing
+            source or stale data — so the omission is stated on-page (principle 4) without a box
+            sitting above the list on a normal day. */}
+        {(anyFailing || stale) && <div className={`mt-3 ${CARD} shadow-none border border-stamp/40 px-4 pb-3`}><Stamp state={state} onAbout={onAbout} T={T} /><BlindSpotBar state={state} T={T} /></div>}
+        {typedProduct && <ResultVerdict matched={matched.length} T={T} shareLabel={T.shareSearch} query={inputs.query.trim() || normalizeUpcInput(inputs.upc) || normalizeLotInput(inputs.lot) || T.whatYouEntered} />}
         {!state && <p className="mt-3 text-slate">Loading…</p>}
         {state && !rows.length && state.phase === 'done' && (
           <div className={`mt-4 ${CARD} p-5`}>
@@ -581,7 +553,7 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
         {foldActive && (
           <div className="mt-3">
             <button type="button" onClick={() => setFoldOpen(!foldOpen)} aria-expanded={foldOpen} className={BTN_FOLD}>
-              <span>{typedProduct ? T.notMatchingFold(foldedRows.length) : T.otherStatesFold(foldedRows.length)}<span className="block text-sm font-normal text-faint">{T.notMatchingWhy}</span></span>
+              <span>{typedProduct ? T.notMatchingFold(foldedRows.length) : T.otherStatesFold(foldedRows.length)}</span>
               <Chev open={foldOpen} />
             </button>
             {foldOpen && <ul className="mt-3 space-y-3">{foldedRows.map((r) => <IncidentCard key={r.incident.id} row={r} onOpen={onOpen} T={T} lang={lang} recalls={state.recalls} />)}</ul>}
@@ -600,7 +572,8 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
 
       {wantsArchive && state?.archive?.available && (
         <section className="mt-14" aria-labelledby="closed-h">
-          <h2 id="closed-h" className="text-xl font-semibold tracking-tight">{T.closedMatchHead}</h2>
+          <h2 id="closed-h" className="text-xl font-semibold tracking-tight">{T.olderClosedHead}</h2>
+          <p className="mt-1 text-base text-slate">{T.olderClosedSub}</p>
           {state.archive.loading && <p className="mt-1 text-sm text-slate">{T.checkingOlder}</p>}
           {state.archive.lastError && <p className="mt-1 text-sm text-stamp">Couldn’t load older recalls: {state.archive.lastError.message}. Reload to try again.</p>}
           {state.archive.loadedAt && !closedRows.length && <p className="mt-1 text-sm text-slate">{T.noneOlder}</p>}
@@ -611,7 +584,7 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
 
       <footer className="mt-16 pt-6 border-t border-stockdeep flex flex-col gap-3">
         <p className="text-base text-slate">{T.bottomNote}</p>
-        <p className="text-sm text-faint">{checkedAt ? `${T.updatedFrom(fmtTime(checkedAt))} ` : ''}{T.disclaimer}</p>
+        <p className="text-sm text-faint">{checkedAt ? `${T.updatedFrom(fmtTime(checkedAt))} ` : ''}{T.disclaimer}{state?.archive?.available?.olderOpen > 0 ? ` ${T.olderOpenNote(state.archive.available.olderOpen, Math.round((state.currentDays || 180) / 30))}` : ''}</p>
         <p className="flex gap-6 items-center flex-wrap"><FeedbackLink T={T} lang={lang} /><DonateLink T={T} /></p>
       </footer>
       <BackToTop T={T} />
@@ -783,6 +756,18 @@ function CodeList({ label, items, mono = true }) {
   );
 }
 
+/** The product line as the agency wrote it. FDA's can run to 600 characters; clamp at four lines with a More toggle. */
+function ProductLine({ text, T }) {
+  const [open, setOpen] = useState(false);
+  const long = text.length > 160;
+  return (
+    <>
+      <p className={`mt-0.5 text-base leading-snug ${long && !open ? 'line-clamp-4' : ''}`} lang="en">{text}</p>
+      {long && <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="min-h-[36px] text-sm font-medium text-inspection">{open ? T.showLessText : T.showMoreText}</button>}
+    </>
+  );
+}
+
 /**
  * One card per notice: brand on top, the product line as the agency wrote it, then the codes for
  * that notice only. Merging codes across notices is what made "two brands" invisible.
@@ -803,7 +788,7 @@ function ProductCards({ children, T, lang }) {
           return (
             <li key={c.id} className={`${CARD} shadow-none border border-stockdeep p-5`}>
               <p className={`text-sm font-semibold ${brand ? 'text-faint' : 'text-faint font-normal'}`} lang="en">{brand || T.brandNotStated}</p>
-              <p className="mt-0.5 text-lg font-semibold leading-snug" lang="en">{c.product.rawDescription || c.title}</p>
+              <ProductLine text={c.product.rawDescription || c.title} T={T} />
               {guess && guess !== brand && <p className="text-sm text-faint" lang="en">{guess}</p>}
               <CodeList label={T.barcodes} items={upcs} />
               <CodeList label={T.lotCodes} items={c.product.lotCodes} />
@@ -943,7 +928,7 @@ function SpeakButton({ text, lang, T, size = 'sm' }) {
   );
 }
 
-function Incident({ state, id, onBack, onOpen, onArchive, onOutbreaks, T, lang }) {
+function Incident({ state, id, inputs, onBack, onOpen, onArchive, onOutbreaks, T, lang }) {
   const inc = resolveIncident(state, id);
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'auto' }); }, [id]);
   // Unknown id: it may be a closed incident. Load the archive once before saying not found.
@@ -1003,7 +988,7 @@ function Incident({ state, id, onBack, onOpen, onArchive, onOutbreaks, T, lang }
   return (
     <main className="mx-auto w-full max-w-2xl px-5 pb-24">
       <div className="pt-5 flex items-center justify-between gap-2 flex-wrap">
-        <button type="button" onClick={onBack} className="min-h-[48px] inline-flex items-center gap-1 text-base font-medium text-inspection"><Icon name="left" />{T.backToList}</button>
+        <button type="button" onClick={onBack} className="min-h-[48px] inline-flex items-center gap-1 text-base font-medium text-inspection"><Icon name="left" />{T.results}</button>
         <span className="flex gap-2">
           <SpeakButton text={speechText} lang={lang} T={T} size="lg" />
           <ShareButton title={inc.title} T={T} />
@@ -1014,10 +999,29 @@ function Incident({ state, id, onBack, onOpen, onArchive, onOutbreaks, T, lang }
       {closed && <p className="mt-4 rounded-2xl bg-stock px-4 py-3 text-base"><span className="font-medium">{T.bannerClosed(inc.agencies.map((a) => AGENCY_NAME[a]).join(T.and), inc.closedDate ? fmtDay(inc.closedDate) : null)}</span>{T.bannerClosedTail}</p>}
       {!closed && !isCurrent(inc, new Date(), state.currentDays || 180) && <p className="mt-4 rounded-2xl bg-stock px-4 py-3 text-base"><span className="font-medium">{T.bannerOlder(fmtDay(inc.lastNoticeDate || inc.firstInitiated), inc.agencies.map((a) => AGENCY_NAME[a]).join(T.and), Math.round((state.currentDays || 180) / 30))}</span>{T.bannerOlderTail}</p>}
 
+      {/* "Sold in Texas" — the reader's own state against this notice, when a state is set. Reuses
+          the result-language table so the wording and confidence match the list. */}
+      {inputs?.state && (() => {
+        const m = evaluate(inc, state.recalls, { state: inputs.state });
+        const mt = matchText(T, m);
+        if (!mt.headline) return null;
+        const tone = ['state_only', 'state_and_product', 'nationwide', 'nationwide_and_product'].includes(m.matchBasis) ? 'bg-stamptint text-stamp' : m.matchBasis === 'other_state' ? 'bg-stock text-slate' : 'bg-ochretint text-ochre';
+        return <p role="status" className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-lg font-semibold ${tone}`}><Icon name="pin" size={20} />{mt.headline}</p>;
+      })()}
+
       <section className="mt-8">
-        <SevChip severity={inc.severity} T={T} size="lg" />
+        <SevChip severity={inc.severity} T={T} size="lg" long />
         <h1 lang={!inc.titleParts && lang !== 'en' ? 'en' : undefined} className="mt-3 text-[32px] sm:text-[40px] font-medium leading-[1.15] tracking-tight [text-wrap:balance]">{incidentTitleFor(lang, inc.titleParts, inc.title)}</h1>
-        <p className="mt-2 text-lg text-slate">{sevText(T, inc.severity).one}</p>
+        <p className="mt-2 text-lg text-slate" lang="en">
+          {(() => {
+            const firms = [...new Set(children.map((c) => c.firm.raw).filter(Boolean))];
+            const head = firms.slice(0, 2).join(', ');
+            const more = children.length > 2 ? ` ${T.andNMore(children.length - 2)}` : '';
+            const agency = AGENCY_NAME[lead.agency] || lead.agency;
+            const tail = children.length === 1 ? T.fromNoticeId(agency, lead.nativeId) : T.fromNotices(children.length, inc.agencies.map((a) => AGENCY_NAME[a]).join(T.and));
+            return `${head}${more} ${tail}`.trim();
+          })()}
+        </p>
       </section>
 
       <section className={`mt-8 ${CARD} p-7`} aria-labelledby="do-h">
@@ -1102,6 +1106,11 @@ function Incident({ state, id, onBack, onOpen, onArchive, onOutbreaks, T, lang }
             </div>
           )}
         </dl>
+        {(lead.sourceUrl || lead.enforcementReportUrl) && (
+          <a className="mt-4 min-h-[48px] inline-flex items-center gap-1.5 text-lg font-medium text-inspection" href={lang === 'es' && lead.es?.sourceUrl ? lead.es.sourceUrl : (lead.sourceUrl || lead.enforcementReportUrl)} target="_blank" rel="noopener">
+            {T.readNotice(AGENCY_NAME[lead.agency] || lead.agency)}<Icon name="out" size={16} />
+          </a>
+        )}
       </section>
 
       {(children.length > 1 || related.length > 0) && (
@@ -1342,7 +1351,7 @@ function UnknownFold({ u, named, state, T, now, compact, ended }) {
   return (
     <li className={compact ? 'py-2 border-b border-stockdeep' : 'rounded-2xl bg-stock px-6 py-4'}>
       <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="w-full text-left min-h-[44px]">
-        <span className={`${compact ? 'font-medium' : 'text-lg font-semibold'} flex flex-wrap items-center gap-2`}>{head}{newN > 0 && !ended && <NewTag T={T} n={newN} />}<span className="ml-auto text-faint"><Chev open={open} /></span></span>
+        <span className={`${compact ? 'font-medium' : 'text-lg font-semibold'} flex flex-wrap items-center gap-2`}>{head}{newN > 0 && !ended && <NewTag T={T} n={newN} />}</span>
         <span className="block text-sm text-faint">{meta}</span>
       </button>
       {open && (
@@ -1356,6 +1365,27 @@ function UnknownFold({ u, named, state, T, now, compact, ended }) {
         </ul>
       )}
     </li>
+  );
+}
+
+/** One germ inside an Ended year: the mockup's prose line; tapping it opens the rows with their links. */
+function EndedGroup({ g, germName, state, T, lang, now }) {
+  const [open, setOpen] = useState(false);
+  const { foods, unknown } = summarizeGroup(g);
+  const line = [...foods.map((f) => f.text + (f.n > 1 ? ` (${f.n})` : '')), unknown ? T.obUnknownEnded(unknown) : null].filter(Boolean).join(', ');
+  return (
+    <div>
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="w-full text-left min-h-[44px]">
+        <span className="block text-lg font-semibold">{germName(g.agent)} <span className="text-faint font-normal">· {g.n}</span></span>
+        <span className="block text-base text-slate" lang="en">{line}</span>
+      </button>
+      {open && (
+        <ul className="mt-1 pl-3 border-l-2 border-stockdeep">
+          {g.named.map((o) => <OutbreakEntry key={o.id} o={o} state={state} T={T} lang={lang} now={now} compact />)}
+          <UnknownFold u={g.unknown} named={g.named.length > 0} state={state} T={T} now={now} compact ended />
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -1432,30 +1462,18 @@ function Outbreaks({ state, onBack, onOpen, onRefresh, T, lang, setLang = () => 
                 <h2><button type="button" aria-expanded={isOpen} onClick={() => setOpenYears({ ...openYears, [y.year]: !isOpen })} className="w-full min-h-[60px] flex items-center gap-3 text-left">
                   <span className="flex-1 text-[22px] font-semibold">{y.year}</span><span className="text-sm text-faint">{T.obYearN(y.n)}</span><span className="text-faint"><Chev open={isOpen} size={20} /></span>
                 </button></h2>
-                {isOpen && y.groups.map((g) => (
-                  <div key={g.agent} className="mt-1 mb-4">
-                    <p className="text-lg font-semibold">{germName(g.agent)} <span className="text-faint font-normal">· {g.n}</span></p>
-                    <ul>
-                      {g.named.map((o) => <OutbreakEntry key={o.id} o={o} state={state} T={T} lang={lang} now={now} compact />)}
-                      <UnknownFold u={g.unknown} named={g.named.length > 0} state={state} T={T} now={now} compact ended />
-                    </ul>
-                  </div>
-                ))}
+                {isOpen && <div className="pb-4 flex flex-col gap-3.5">{y.groups.map((g) => <EndedGroup key={g.agent} g={g} germName={germName} state={state} T={T} lang={lang} now={now} />)}</div>}
               </section>
             );
           })}
         </>
       )}
 
-      <footer className="mt-14 pt-6 border-t border-stockdeep text-sm text-faint flex flex-col gap-2">
-        <p>
-          {T.obFrom}{core?.dataThroughDate ? ` · ${T.obDated(fmtDay(core.dataThroughDate))}` : ''}. {T.obFdaBack}{' '}
-          <a className="text-inspection font-medium" href="https://www.fda.gov/food/foodborne-pathogens/investigations-foodborne-illness-outbreaks" target="_blank" rel="noopener">{T.obFdaFull}</a>
-          {' · '}<a className="text-inspection font-medium" href="https://www.cdc.gov/foodborne-outbreaks/" target="_blank" rel="noopener">{T.obCdcList}</a>
-          {' · '}<a className="text-inspection font-medium" href="#/about">{T.obAboutList}</a>
-        </p>
-        <p>{T.obOurs}</p>
-      </footer>
+      <p className="mt-14 text-sm text-faint">
+        {T.obFrom(fmtDay(core?.fetchedAt || core?.dataThroughDate || state?.generatedAt))}{' '}
+        <a className="text-inspection font-medium" href="https://www.fda.gov/food/foodborne-pathogens/investigations-foodborne-illness-outbreaks" target="_blank" rel="noopener">{T.obFdaFull}</a>
+        {' · '}<a className="text-inspection font-medium" href="https://www.cdc.gov/foodborne-outbreaks/" target="_blank" rel="noopener">{T.obCdcList}</a>
+      </p>
     </main>
   );
 }
@@ -1495,6 +1513,7 @@ function About({ state, onBack, T, lang }) {
       </ul>
       {state?.archive?.available && <p className="mt-3 text-sm text-slate">{T.ab_archiveNote(state.archive.available.incidents)}</p>}
       <p className="mt-4 text-sm text-slate">{T.rememberedNote} {T.stateHint}</p>
+      <p className="mt-2 text-sm text-slate">{T.obOurs}</p>
       {state?.cdcCounts && (
         <section className={`mt-4 ${CARD} shadow-none border border-stockdeep p-4`} aria-labelledby="cmp-h">
           <h2 id="cmp-h" className="text-base font-semibold">{T.cmpHead}</h2>
@@ -1509,7 +1528,7 @@ function About({ state, onBack, T, lang }) {
         </section>
       )}
       <p className="mt-3 text-xs text-slate">{T.ab_review}</p>
-      <p className="mt-3 text-xs text-slate">{T.disclaimer}</p>
+      <p className="mt-3 text-xs text-slate">{T.disclaimerLong}</p>
       {state?.snapshot?.fixture && <p className="mt-3 rounded bg-ochre/10 border border-ochre p-2 text-sm">{T.ab_sample}</p>}
     </main>
   );
@@ -1580,7 +1599,7 @@ function App() {
       {view.name === 'active' && state && <AllActive state={state} inputs={inputs} onOpen={open} onBack={home} T={T} lang={lang} />}
       {view.name === 'review' && <Review state={state} onBack={home} />}
       {view.name === 'outbreaks' && <Outbreaks state={state} onBack={home} onOpen={open} onRefresh={onArchive} T={T} lang={lang} setLang={setLang} />}
-      {view.name === 'incident' && state && <Incident state={state} id={view.id} onBack={home} onOpen={open} onArchive={onArchive} onOutbreaks={() => setView({ name: 'outbreaks' })} T={T} lang={lang} />}
+      {view.name === 'incident' && state && <Incident state={state} id={view.id} inputs={inputs} onBack={home} onOpen={open} onArchive={onArchive} onOutbreaks={() => setView({ name: 'outbreaks' })} T={T} lang={lang} />}
       {view.name === 'about' && <About state={state} onBack={home} T={T} lang={lang} />}
     </>
   );
