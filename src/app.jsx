@@ -420,9 +420,10 @@ function splitLead(text) {
  * past: caution styling when nothing matched (an empty result is the moment people most need to
  * read the caveat), calm styling when something did. role="status" so screen readers announce it.
  */
-function ResultVerdict({ matched, T, shareLabel, query }) {
+function ResultVerdict({ matched, T, shareLabel, query, exactUpc = 0 }) {
   const none = matched === 0;
-  const [lead, rest] = splitLead(none ? T.nothingMatched(query) : T.matchedCount(matched, query));
+  // A full, valid barcode match is the one certain result the site gives (principle 7): say so.
+  const [lead, rest] = splitLead(none ? T.nothingMatched(query) : exactUpc ? T.matchedUpc(exactUpc, query) : T.matchedCount(matched, query));
   return (
     <div role="status" className={`mt-4 ${CARD} p-6 ${none ? 'border border-ochre' : ''}`}>
       <p className="text-3xl font-medium leading-tight tracking-tight flex items-start gap-2">{none && <span className="text-ochre mt-1.5"><Icon name="warn" size={22} /></span>}<span>{lead}</span></p>
@@ -447,7 +448,6 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
   const [showMinor, setShowMinor] = useState(false);
   const typedProduct = !!(inputs.query.trim() || normalizeUpcInput(inputs.upc).length >= 6 || normalizeLotInput(inputs.lot).length >= 4);
   const typed = !!inputs.state || typedProduct;
-  const matched = rows.filter((r) => r.match.matchBasis !== 'none' && r.match.matchBasis !== 'other_state');
   const loading = state && state.phase !== 'done';
 
   // Closed recalls become relevant only when someone names a product or barcode — then the archive
@@ -458,6 +458,10 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
     loadArchive(state).then(() => onArchive());
   }, [wantsArchive, state?.phase]);
   const PRODUCT_BASES = new Set(['upc', 'upc_unverified', 'lot', 'state_and_product', 'nationwide_and_product', 'product_guess', 'upc_prefix']);
+  // The verdict counts only product/barcode/lot matches. Counting state-only matches too made a
+  // barcode that matches nothing read "102 recalls may match 041220334568" (found by the scanner
+  // end-to-end test, Nov 2026) — the opposite of what principle 7 promises.
+  const matched = rows.filter((r) => PRODUCT_BASES.has(r.match.matchBasis));
 
   // Dynamic relevance: matches stay open; everything else collapses into one counted fold.
   // Collapsed, never removed — the fold's count is the trace that keeps a parser miss findable.
@@ -534,7 +538,7 @@ function Home({ state, inputs, setInputs, onOpen, onAbout, onOutbreaks, onActive
             source or stale data — so the omission is stated on-page (principle 4) without a box
             sitting above the list on a normal day. */}
         {(anyFailing || stale) && <div className={`mt-3 ${CARD} shadow-none border border-stamp/40 px-4 pb-3`}><Stamp state={state} onAbout={onAbout} T={T} /><BlindSpotBar state={state} T={T} /></div>}
-        {typedProduct && <ResultVerdict matched={matched.length} T={T} shareLabel={T.shareSearch} query={inputs.query.trim() || normalizeUpcInput(inputs.upc) || normalizeLotInput(inputs.lot) || T.whatYouEntered} />}
+        {typedProduct && <ResultVerdict matched={matched.length} exactUpc={matched.filter((r) => r.match.matchBasis === 'upc').length} T={T} shareLabel={T.shareSearch} query={inputs.query.trim() || normalizeUpcInput(inputs.upc) || normalizeLotInput(inputs.lot) || T.whatYouEntered} />}
         {!state && <p className="mt-3 text-slate">Loading…</p>}
         {state && !rows.length && state.phase === 'done' && (
           <div className={`mt-4 ${CARD} p-5`}>
