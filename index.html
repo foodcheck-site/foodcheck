@@ -7,45 +7,69 @@
 <meta name="description" content="Check active US food recalls by state, product, or barcode. Plain answers, honest about what the data can't tell you.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
     theme: {
       extend: {
+        // Nov 2026 palette (outside UX review): soft off-white page, near-white cards with a shadow,
+        // one accent blue, red/amber only for severity. All text pairs pass WCAG AA on their tints.
         colors: {
-          paper: '#FFFFFF',
-          ink: '#1B1F24',
-          stamp: '#B3261E',
-          ochre: '#8A5A00',
-          slate: '#4A5568',
-          inspection: '#1D4ED8',
-          stock: '#E6E9ED',
-          stockdeep: '#D9DEE5',
+          paper: '#F8FBF8',        // page background
+          surface: '#FFFFFC',      // cards
+          ink: '#2B2B2A',
+          body: '#3A3A39',
+          slate: '#474846',        // muted text (8.7:1 on paper)
+          faint: '#5C5D5B',        // captions (6.5:1 on paper)
+          stamp: '#A8231A',        // serious
+          stamptint: '#FCEBE9',
+          ochre: '#7F4E00',        // moderate
+          ochretint: '#FBF0DD',
+          inspection: '#26628B',   // accent
+          inspectiondark: '#1D4E70',
+          inspectiontint: '#E3EDF4',
+          stock: '#EFF2EF',        // soft fill
+          stockdeep: '#DCDDDD',    // hairline
+          field: '#C9CACA',        // input border
+          track: '#E7E7EB',        // segmented-control track
         },
         fontFamily: {
-          display: ['Archivo', 'system-ui', 'sans-serif'],
-          body: ['"Public Sans"', 'system-ui', 'sans-serif'],
+          display: ['Inter', 'system-ui', 'sans-serif'],
+          body: ['Inter', 'system-ui', 'sans-serif'],
           mono: ['"IBM Plex Mono"', 'ui-monospace', 'Menlo', 'monospace'],
+        },
+        boxShadow: {
+          card: '0 8px 18px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.06)',
+          cardhover: '0 10px 24px rgba(0,0,0,.09), 0 1px 2px rgba(0,0,0,.06)',
         },
       },
     },
   };
 </script>
 <style>
-  html { background: #FFFFFF; color: #1B1F24; }
-  body { font-family: "Public Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  html { background: #F8FBF8; color: #2B2B2A; }
+  body { font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
   /* Focus: visible everywhere, never removed. */
-  :focus-visible { outline: 3px solid #1D4ED8; outline-offset: 2px; }
+  :focus-visible { outline: 3px solid rgba(38, 98, 139, .55); outline-offset: 2px; }
+  /* Severity chips. The dot's SHAPE carries the level (square = serious, diamond = moderate,
+     ring = not yet rated, disc = minor) so color is never the only signal. */
+  .dot { display: inline-block; width: 8px; height: 8px; flex: none; }
+  .dot-serious { background: #A8231A; }
+  .dot-alert { background: #A8231A; transform: rotate(45deg); }
+  .dot-moderate { background: #7F4E00; transform: rotate(45deg); }
+  .dot-unrated { border: 2px solid #474846; box-sizing: border-box; }
+  .dot-minor { background: #474846; border-radius: 50%; }
+  input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
   /* Severity edges. Shape + weight differ so color is never the only signal. */
-  .edge-1 { border-left: 12px solid #B3261E; background-image: repeating-linear-gradient(135deg, #B3261E 0 6px, #7A1912 6px 12px); background-size: 12px 100%; background-repeat: no-repeat; background-position: left; }
-  .edge-a { border-left: 12px solid #B3261E; }
-  .edge-u { border-left: 6px dashed #4A5568; }
-  .edge-2 { border-left: 6px double #8A5A00; }
-  .edge-3 { border-left: 3px solid #4A5568; }
+  .edge-1 { border-left: 6px solid #A8231A; }
+  .edge-a { border-left: 6px solid #A8231A; }
+  .edge-u { border-left: 4px dashed #474846; }
+  .edge-2 { border-left: 6px double #7F4E00; }
+  .edge-3 { border-left: 3px solid #474846; }
   /* Blind-spot hatch */
-  .hatch { background-image: repeating-linear-gradient(135deg, #D9DEE5 0 4px, #FFFFFF 4px 8px); }
-  .hatch-fail { background-image: repeating-linear-gradient(90deg, #B3261E 0 6px, transparent 6px 10px); }
+  .hatch { background-image: repeating-linear-gradient(135deg, #DCDDDD 0 4px, #FFFFFC 4px 8px); }
+  .hatch-fail { background-image: repeating-linear-gradient(90deg, #A8231A 0 6px, transparent 6px 10px); }
   @media (prefers-reduced-motion: no-preference) {
     .fade-in { animation: fade .25s ease-out both; }
     @keyframes fade { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
@@ -54,12 +78,12 @@
 </style>
 </head>
 <body class="font-body text-ink bg-paper" data-feedback-email="foodcheck@duck.com" data-donate-url="buymeacoffee.com/foodcheck">
-<div id="root"><p style="padding:1rem;color:#4A5568">Loading FoodCheck…</p></div>
+<div id="root"><p style="padding:1rem;color:#474846">Loading FoodCheck…</p></div>
 <script>
   // If anything fails before React draws, say so on the page instead of leaving it blank.
   window.addEventListener('error', function (e) {
     var root = document.getElementById('root');
-    if (root && !root.dataset.started) root.innerHTML = '<div style="padding:1rem;font-family:system-ui;max-width:42rem"><p style="color:#B3261E;font-weight:600">The page couldn\u2019t start.</p><p style="margin-top:.5rem">' + String(e.message || e.error || 'Unknown error') + (e.filename ? ' <span style="color:#4A5568">(' + e.filename.replace(location.origin, '') + ':' + e.lineno + ')</span>' : '') + '</p><p style="margin-top:.5rem;color:#4A5568;font-size:.9rem">Copy this message when reporting the problem. The server window may show more.</p></div>';
+    if (root && !root.dataset.started) root.innerHTML = '<div style="padding:1rem;font-family:system-ui;max-width:42rem"><p style="color:#A8231A;font-weight:600">The page couldn\u2019t start.</p><p style="margin-top:.5rem">' + String(e.message || e.error || 'Unknown error') + (e.filename ? ' <span style="color:#474846">(' + e.filename.replace(location.origin, '') + ':' + e.lineno + ')</span>' : '') + '</p><p style="margin-top:.5rem;color:#474846;font-size:.9rem">Copy this message when reporting the problem. The server window may show more.</p></div>';
   });
   window.addEventListener('unhandledrejection', function (e) { window.dispatchEvent(new ErrorEvent('error', { message: String(e.reason && e.reason.message || e.reason) })); });
 </script>
